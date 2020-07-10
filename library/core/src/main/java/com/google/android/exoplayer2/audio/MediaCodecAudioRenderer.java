@@ -50,6 +50,7 @@ import com.google.android.exoplayer2.mediacodec.MediaCodecSelector;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil.DecoderQueryException;
 import com.google.android.exoplayer2.mediacodec.MediaFormatUtil;
+import com.google.android.exoplayer2.util.Assertions;
 import com.google.android.exoplayer2.util.MediaClock;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.Util;
@@ -468,7 +469,17 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
       }
     }
     try {
-      audioSink.configure(audioSinkInputFormat, /* specifiedBufferSize= */ 0, channelMap);
+      // There an issue in FireTV for assets with less than <5 seconds and with surround audio
+      // tracks that causes the playback to freeze. This workaround the bug by providing a
+      // buffer size, instead of allow AudioSink to determine it.
+      // Default seems to be 196000 for the maximum bitrate of 6.4Mbit/sec for EAC3.
+      // As I have never seen audio with bitrates above a 1 megabit, I think we should be safe
+      // with lower numbers. For comparision, AC3 uses 20000 for buffer size.
+      @C.Encoding
+      int encoding = MimeTypes.getEncoding(Assertions.checkNotNull(
+          audioSinkInputFormat.sampleMimeType), audioSinkInputFormat.codecs);
+      int specifiedBufferSize = encoding == C.ENCODING_E_AC3 ? 118000 : 0;
+      audioSink.configure(audioSinkInputFormat, specifiedBufferSize, channelMap);
     } catch (AudioSink.ConfigurationException e) {
       throw createRendererException(e, e.format);
     }
