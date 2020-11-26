@@ -43,12 +43,21 @@ bazel-genfiles
 bazel-out
 bazel-testlogs
 
+# Testing
+jacoco.exec
+
+# Fastlane
+fastlane/README.md
+fastlane/report.xml
+
 # Other
+.build
 .DS_Store
 cmake-build-debug
 dist
 jacoco.exec
 tmp
+.cxx
 
 # External native builds
 .externalNativeBuild

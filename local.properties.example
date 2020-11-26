@@ -1,0 +1,26 @@
+# In order to obtain credentials, please ask in #core-video-mobile
+
+sdk.dir=/Users/[user]/Library/Android/sdk
+ndk.dir=/Users/[user]/Library/Android/sdk/ndk/21.1.6352462
+cmake.dir=/Users/[user]/Library/Android/sdk/cmake/3.10.2.4988404
+
+artifactory_username=playerframework
+artifactory_password=
+artifactory_protocol=http
+artifactory_host=artifactory.imp.sky.com/artifactory
+artifactory_path_release=sky-releases-local
+artifactory_path_snapshot=sky-snapshots-local
+artifactory_path_third_party=third-party-releases-local
+
+new_artifactory_username=corevideoteam-ci-ro-user
+new_artifactory_password=
+new_artifactory_write_username=corevideoteam-ci-user
+new_artifactory_write_password=
+new_artifactory_protocol=https
+new_artifactory_host=artifactory.tools.ottcds.com/artifactory
+new_artifactory_path_release=sky-go-release-maven
+new_artifactory_path_snapshot=sky-go-snapshot-maven
+new_artifactory_cvsdk_path=core-video-sdk-android-maven
+new_artifactory_kmp_path=core-video-sdk-multiplatform-maven
+
+github_token=
