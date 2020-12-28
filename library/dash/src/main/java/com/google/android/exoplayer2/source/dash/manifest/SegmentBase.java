@@ -248,6 +248,10 @@ public abstract class SegmentBase {
       return startNumber;
     }
 
+    public long getDuration() {
+      return duration;
+    }
+
     /** See {@link DashSegmentIndex#getFirstAvailableSegmentNum(long, long)}. */
     public long getFirstAvailableSegmentNum(long periodDurationUs, long nowUnixTimeUs) {
       long segmentCount = getSegmentCount(periodDurationUs);
