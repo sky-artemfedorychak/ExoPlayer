@@ -1754,12 +1754,12 @@ public class DashManifestParser extends DefaultHandler
 
   protected static int parseInt(XmlPullParser xpp, String name, int defaultValue) {
     String value = xpp.getAttributeValue(null, name);
-    return value == null ? defaultValue : Integer.parseInt(value);
+    return value == null ? defaultValue : (int) Double.parseDouble(value);
   }
 
   protected static long parseLong(XmlPullParser xpp, String name, long defaultValue) {
     String value = xpp.getAttributeValue(null, name);
-    return value == null ? defaultValue : Long.parseLong(value);
+    return value == null ? defaultValue : (long) Double.parseDouble(value);
   }
 
   protected static float parseFloat(XmlPullParser xpp, String name, float defaultValue) {
