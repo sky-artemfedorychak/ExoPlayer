@@ -1618,6 +1618,21 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
       // https://github.com/google/ExoPlayer/issues/4468#issuecomment-459291645.
       return true;
     }
+    if (Util.SDK_INT >= 27) {
+      // Workaround for several Amazon devices:
+      // https://github.com/amzn/exoplayer-amazon-port/commit/52bd718a20e7253ba7129a322da51bfc1464728b
+      switch (Util.MODEL){
+        case "AFTR":
+        case "AFTSO001":
+        case "AFTEU014":
+        case "AFTEUFF014":
+        case "AFTEU011":
+          return true;
+        default:
+          // Do nothing.
+          break;
+      }
+    }
     if (Util.SDK_INT <= 26) {
       // In general, devices running API level 27 or later should be unaffected unless observed
       // otherwise. Enable the workaround on a per-device basis. Works around:
@@ -1787,6 +1802,9 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
         case "AFTA":
         case "AFTN":
         case "JSN-L21":
+        // https://github.com/amzn/exoplayer-amazon-port/commit/52bd718a20e7253ba7129a322da51bfc1464728b
+        case "AFTJMST12":
+        case "AFTKMST12":
           return true;
         default:
           break; // Do nothing.
