@@ -1613,9 +1613,14 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
           break; // Do nothing.
       }
     }
-    if (Util.SDK_INT <= 27 && "HWEML".equals(Util.DEVICE)) {
-      // Workaround for Huawei P20:
-      // https://github.com/google/ExoPlayer/issues/4468#issuecomment-459291645.
+    if (Util.SDK_INT <= 27 &&
+        // Workaround for Huawei P20:
+        // https://github.com/google/ExoPlayer/issues/4468#issuecomment-459291645.
+        ("HWEML".equals(Util.DEVICE) ||
+        // Workaround for Alco devices
+        // https://github.com/google/ExoPlayer/issues/6930#issuecomment-611249518
+        ("RCA".equals(Util.MANUFACTURER) && Util.DEVICE.startsWith("RCT"))
+    )) {
       return true;
     }
     if (Util.SDK_INT >= 27) {
