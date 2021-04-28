@@ -329,6 +329,9 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
   private boolean codecNeedsEosFlushWorkaround;
   private boolean codecNeedsEosOutputExceptionWorkaround;
   private boolean codecNeedsEosBufferTimestampWorkaround;
+  private boolean codecNeedsDrainWaitForEosStateWorkaround;
+  private boolean codecNeedsProcessedOutputBufferBeforeDrainWaitForEosStateWorkaround;
+  private boolean codecNeedsDrainWaitForEosStateAfterProcessOutputFormatWorkaround;
   private boolean codecNeedsMonoChannelCountWorkaround;
   private boolean codecNeedsAdaptationWorkaroundBuffer;
   private boolean shouldSkipAdaptationWorkaroundOutputBuffer;
@@ -364,6 +367,8 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
   private long outputStreamStartPositionUs;
   private long outputStreamOffsetUs;
   private int pendingOutputStreamOffsetCount;
+  private boolean hasProcessedOutputBufferBefore;
+  private boolean waitingForEosAfterProcessOutputFormat;
 
   /**
    * @param trackType The track type that the renderer handles. One of the {@code C.TRACK_TYPE_*}
@@ -1132,6 +1137,11 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
     codecNeedsEosFlushWorkaround = codecNeedsEosFlushWorkaround(codecName);
     codecNeedsEosOutputExceptionWorkaround = codecNeedsEosOutputExceptionWorkaround(codecName);
     codecNeedsEosBufferTimestampWorkaround = codecNeedsEosBufferTimestampWorkaround(codecName);
+    codecNeedsDrainWaitForEosStateWorkaround = codecNeedsDrainWaitForEosStateWorkaround(codecName);
+    codecNeedsProcessedOutputBufferBeforeDrainWaitForEosStateWorkaround =
+        codecNeedsProcessedOutputBufferBeforeDrainWaitForEosStateWorkaround(codecName);
+    codecNeedsDrainWaitForEosStateAfterProcessOutputFormatWorkaround =
+        codecNeedsDrainWaitForEosStateAfterProcessOutputFormatWorkaround(codecName);
     codecNeedsMonoChannelCountWorkaround =
         codecNeedsMonoChannelCountWorkaround(codecName, codecInputFormat);
     codecNeedsEosPropagation =
@@ -1779,14 +1789,28 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
         outputIndex = codec.dequeueOutputBufferIndex(outputBufferInfo);
       }
 
-      if (outputIndex < 0) {
+      boolean waitingForDrainAfterProcessOutputFormat = codecNeedsDrainWaitForEosStateAfterProcessOutputFormatWorkaround &&
+          outputIndex == 0 && waitingForEosAfterProcessOutputFormat && codecReceivedEos && inputStreamEnded;
+      waitingForEosAfterProcessOutputFormat = false;
+      if (outputIndex < 0 || waitingForDrainAfterProcessOutputFormat) {
         if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED /* (-2) */) {
           processOutputMediaFormatChanged();
+          waitingForEosAfterProcessOutputFormat = true;
           return true;
         }
         // MediaCodec.INFO_TRY_AGAIN_LATER (-1) or unknown negative return value.
         if (codecNeedsEosPropagation
             && (inputStreamEnded || codecDrainState == DRAIN_STATE_WAIT_END_OF_STREAM)) {
+          processEndOfStream();
+        } else if (codecNeedsDrainWaitForEosStateWorkaround && codecReceivedEos
+            && (!codecNeedsProcessedOutputBufferBeforeDrainWaitForEosStateWorkaround || hasProcessedOutputBufferBefore)
+            && ((codecDrainState == DRAIN_STATE_WAIT_END_OF_STREAM && codecDrainAction == DRAIN_ACTION_REINITIALIZE) || inputStreamEnded)) {
+          // Some codecs processes incorrectly drainAndReinitializeCodec and
+          // renderer never get out from DRAIN_STATE_WAIT_END_OF_STREAM state, leading
+          // audio and video to stall waiting for the codec to process the event, so just force
+          // a codec reinitialization to get the codec in the right state again.
+          Log.w(TAG, "Codec requires reinitialization because of wrong draining wait for eos state." +
+              " (waitingForDrainAfterProcessOutputFormat: " + waitingForDrainAfterProcessOutputFormat + ")");
           processEndOfStream();
         }
         return false;
@@ -1866,6 +1890,7 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
     }
 
     if (processedOutputBuffer) {
+      hasProcessedOutputBufferBefore = true;
       onProcessedOutputBuffer(outputBufferInfo.presentationTimeUs);
       boolean isEndOfStream = (outputBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
       resetOutputBuffer();
@@ -2436,5 +2461,61 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
   private static boolean codecNeedsMonoChannelCountWorkaround(String name, Format format) {
     return Util.SDK_INT <= 18 && format.channelCount == 1
         && "OMX.MTK.AUDIO.DECODER.MP3".equals(name);
+  }
+
+  /**
+   * Returns whether driver incorrectly process DRAIN_STATE_WAIT_END_OF_STREAM and
+   * require a codec reinitialization to skip waiting indefinitely for the codec to
+   * response to the message.
+   *
+   * @param name The name of the decoder.
+   * @return True if is known to cause this issue.
+   */
+  private static boolean codecNeedsDrainWaitForEosStateWorkaround(String name) {
+    boolean fireTv = "Amazon".equals(Util.MANUFACTURER)
+        && "OMX.dolby.eac3.decoder".equals(name);
+    boolean hisense = Util.SDK_INT <= 26
+        && "Hisense".equals(Util.MANUFACTURER)
+        && ("laoshan".equals(Util.DEVICE) || "xinhaoshan".equals(Util.DEVICE))
+        && "OMX.MTK.AUDIO.DECODER.DSPEAC3".equals(name);
+    boolean tcl = Util.SDK_INT <= 28
+        && "TCL".equals(Util.MANUFACTURER)
+        && ("UnionTV".equals(Util.DEVICE))
+        && "OMX.RTK.audio.decoder".equals(name);
+    boolean att = Util.SDK_INT <= 26
+        // AT&T TV (with BRCM7271 chipsets): Manufacturer seems misreported according to Google
+        // (it should be AT&T but seems to be samsung and WNC so it is not an accurate
+        // filter. Using device name should be enough)
+        && ("c71kw200".equals(Util.DEVICE) || "c71kw400".equals(Util.DEVICE) || "c71kw400-4gb".equals(Util.DEVICE))
+        && "OMX.broadcom.audio_decoder.eac3".equals(name);
+    return (fireTv || hisense || tcl || att);
+  }
+
+  /**
+   * Returns whether driver before DrainWaitForEosStateWorkaround needs to have
+   * been processed some output.
+   *
+   * @param name The name of the decoder.
+   * @return True if is known to cause this issue.
+   */
+  private static boolean codecNeedsProcessedOutputBufferBeforeDrainWaitForEosStateWorkaround(String name) {
+    return Util.SDK_INT <= 26
+        && "Hisense".equals(Util.MANUFACTURER)
+        && ("laoshan".equals(Util.DEVICE) || "xinhaoshan".equals(Util.DEVICE))
+        && "OMX.MTK.AUDIO.DECODER.DSPEAC3".equals(name);
+  }
+
+  /**
+   * Returns whether driver enters into processOutputFormat but it reported to have some buffer
+   * while inputStream was ended and codec received eos.
+   *
+   * @param name The name of the decoder.
+   * @return True if is known to cause this issue.
+   */
+  private static boolean codecNeedsDrainWaitForEosStateAfterProcessOutputFormatWorkaround(String name) {
+    return Util.SDK_INT <= 28
+        && "TCL".equals(Util.MANUFACTURER)
+        && ("UnionTV".equals(Util.DEVICE))
+        && "OMX.RTK.audio.decoder".equals(name);
   }
 }
