@@ -2518,4 +2518,17 @@ public abstract class MediaCodecRenderer extends BaseRenderer {
         && ("UnionTV".equals(Util.DEVICE))
         && "OMX.RTK.audio.decoder".equals(name);
   }
+
+  /**
+   * Returns true if media codec is neither draining nor waiting for EOS stream and
+   * has processed output before.
+   *
+   * @return true if matches conditions.
+   */
+  protected final boolean isNeitherDrainingNorWaitingForEosState() {
+    return hasProcessedOutputBufferBefore
+        && !codecReceivedEos && !inputStreamEnded && !outputStreamEnded
+        && codecDrainState == DRAIN_STATE_NONE
+        && codecDrainAction == DRAIN_ACTION_NONE;
+  }
 }

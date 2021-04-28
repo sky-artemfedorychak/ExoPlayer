@@ -17,6 +17,8 @@ package com.google.android.exoplayer2.audio;
 
 import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.DISCARD_REASON_MAX_INPUT_SIZE_EXCEEDED;
 import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.REUSE_RESULT_NO;
+import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.REUSE_RESULT_YES_WITH_FLUSH;
+import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.REUSE_RESULT_YES_WITH_RECONFIGURATION;
 import static com.google.android.exoplayer2.util.Assertions.checkNotNull;
 import static java.lang.Math.max;
 
@@ -373,6 +375,14 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
     @DecoderDiscardReasons int discardReasons = evaluation.discardReasons;
     if (getCodecMaxInputSize(codecInfo, newFormat) > codecMaxInputSize) {
       discardReasons |= DISCARD_REASON_MAX_INPUT_SIZE_EXCEEDED;
+    }
+
+    // Some devices require a lower reuse level than they should. This
+    // modifies the evaluation result on those devices if required.
+    if (evaluation.result == REUSE_RESULT_YES_WITH_FLUSH) {
+      if (codecNeedsReconfigurationWhileNotWaitingForDrainEosStateWorkaround(codecInfo.mimeType)) {
+        evaluation = evaluation.copyWithResult(REUSE_RESULT_YES_WITH_RECONFIGURATION);
+      }
     }
 
     return new DecoderReuseEvaluation(
@@ -819,6 +829,30 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
         && (Util.DEVICE.startsWith("zeroflte")
             || Util.DEVICE.startsWith("herolte")
             || Util.DEVICE.startsWith("heroqlte"));
+  }
+
+  /**
+   * Returns whether EAC3 codecs incorrectly process discontinuity events requiring
+   * a codec reconfiguration instead of just a buffer flush.
+   *
+   * @param mimeType The mime type of the codec.
+   * @return True if is known to cause this issue.
+   */
+  private boolean codecNeedsReconfigurationWhileNotWaitingForDrainEosStateWorkaround(String mimeType) {
+    // Hisense AndroidTV 8
+    boolean hisense = Util.SDK_INT <= 26  && ("Hisense".equals(Util.MANUFACTURER) && ("laoshan".equals(Util.DEVICE) || "xinhaoshan".equals(Util.DEVICE)));
+    // MiBox 3
+    boolean xiaomi = Util.SDK_INT <= 26  && ("Xiaomi".equals(Util.MANUFACTURER) && "once".equals(Util.DEVICE));
+    // Sony Bravia
+    boolean bravia = Util.SDK_INT <= 26  && ("Sony".equals(Util.MANUFACTURER) && Util.MODEL.toLowerCase().startsWith("bravia"));
+    // Amazon FireTV devices
+    boolean amazon = "Amazon".equals(Util.MANUFACTURER) && Util.MODEL.startsWith("AFT");
+    // Google TV Sabrina - Chromecast
+    boolean sabrina = Util.MODEL.toLowerCase().startsWith("chromecast");
+
+    return (MimeTypes.AUDIO_E_AC3.equals(mimeType) || MimeTypes.AUDIO_AC3.equals(mimeType))
+        && isNeitherDrainingNorWaitingForEosState()
+        && (hisense || xiaomi || bravia || amazon || sabrina);
   }
 
   private final class AudioSinkListener implements AudioSink.Listener {

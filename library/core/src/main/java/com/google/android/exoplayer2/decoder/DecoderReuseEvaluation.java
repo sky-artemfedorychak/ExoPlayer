@@ -149,6 +149,16 @@ public final class DecoderReuseEvaluation {
     this.discardReasons = discardReasons;
   }
 
+  public DecoderReuseEvaluation copyWithResult(@DecoderReuseResult int result) {
+    return new DecoderReuseEvaluation(
+        decoderName,
+        oldFormat,
+        newFormat,
+        result,
+        discardReasons
+    );
+  }
+
   @Override
   public boolean equals(@Nullable Object obj) {
     if (this == obj) {
