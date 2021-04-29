@@ -40,6 +40,7 @@ import com.google.android.exoplayer2.source.MediaSource.MediaPeriodId;
 import com.google.android.exoplayer2.source.SampleStream;
 import com.google.android.exoplayer2.source.ShuffleOrder;
 import com.google.android.exoplayer2.source.TrackGroupArray;
+import com.google.android.exoplayer2.source.ads.AdMediaPeriod;
 import com.google.android.exoplayer2.text.TextRenderer;
 import com.google.android.exoplayer2.trackselection.ExoTrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
@@ -56,7 +57,9 @@ import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Implements the internal behavior of {@link ExoPlayerImpl}. */
@@ -206,6 +209,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
   @Nullable private ExoPlaybackException pendingRecoverableError;
 
   private long setForegroundModeTimeoutMs;
+
+  // Helio seek to ad edge workaround flags
+  private final Map<Renderer, Long> lastKnownReadingPositionUs = new HashMap<>();
+  private final Map<Renderer, Long> lastKnownReadingStallTimestamp = new HashMap<>();
+  /**
+   * Same value used in AudioTrackPositionTracker#FORCE_RESET_WORKAROUND_TIMEOUT_MS
+   */
+  private static final long FORCE_RESET_WORKAROUND_TIMEOUT_MS = 200L;
 
   public ExoPlayerImplInternal(
       Renderer[] renderers,
@@ -958,7 +969,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
             isReadingAhead || isWaitingForNextStream || renderer.isReady() || renderer.isEnded();
         renderersAllowPlayback = renderersAllowPlayback && allowsPlayback;
         if (!allowsPlayback) {
-          renderer.maybeThrowStreamError();
+          // If the current playing period is an advert period, then let it
+          // to determine whether to capture and notify the error through an AdLoader
+          // instead of directly stop and release the player. This allow to skip
+          // failed adverts. Throw the stream error (if any) otherwise.
+          try {
+            renderer.maybeThrowStreamError();
+          } catch (IOException ex) {
+            if (playingPeriodHolder.mediaPeriod instanceof AdMediaPeriod) {
+              ((AdMediaPeriod) playingPeriodHolder.mediaPeriod).maybeNotifyOrThrowMediaStreamError(ex);
+              return;
+            } else {
+              throw ex;
+            }
+          }
         }
       }
     } else {
@@ -1077,6 +1101,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
   }
 
   private void seekToInternal(SeekPosition seekPosition) throws ExoPlaybackException {
+    clearSeekToHelioAdEdgeWorkaroundFlags();
     playbackInfoUpdate.incrementPendingOperationAcks(/* operationAcks= */ 1);
 
     MediaPeriodId periodId;
@@ -2083,19 +2108,116 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
   private boolean shouldAdvancePlayingPeriod() {
     if (!shouldPlayWhenReady()) {
+      clearSeekToHelioAdEdgeWorkaroundFlags();
       return false;
     }
     if (pendingPauseAtEndOfPeriod) {
+      clearSeekToHelioAdEdgeWorkaroundFlags();
       return false;
     }
     MediaPeriodHolder playingPeriodHolder = queue.getPlayingPeriod();
     if (playingPeriodHolder == null) {
+      clearSeekToHelioAdEdgeWorkaroundFlags();
       return false;
     }
     MediaPeriodHolder nextPlayingPeriodHolder = playingPeriodHolder.getNext();
+    MediaPeriodHolder readingPeriodHolder = queue.getReadingPeriod();
     return nextPlayingPeriodHolder != null
-        && rendererPositionUs >= nextPlayingPeriodHolder.getStartPositionRendererTime()
-        && nextPlayingPeriodHolder.allRenderersEnabled;
+        && nextPlayingPeriodHolder.allRenderersEnabled
+        && (rendererPositionUs >= nextPlayingPeriodHolder.getStartPositionRendererTime() ||
+          isSeekToHelioAdEdgeWorkaround(playingPeriodHolder, nextPlayingPeriodHolder, readingPeriodHolder));
+  }
+
+  private void clearSeekToHelioAdEdgeWorkaroundFlags() {
+    lastKnownReadingPositionUs.clear();
+    lastKnownReadingStallTimestamp.clear();
+  }
+
+  /**
+   * NOTE: This workaround is needed because of how HelioAdLoader handle mid-rolls by setting
+   * position to -1ms on the seeked position, which in case of an ad manifest failure, it will
+   * cause ExoPlayer to enter into an infinite loop and no reporting the ad manifest error.
+   * The problem is that in that case AudioTrack is not able to process the audio input buffer
+   * that kept filled without being processed because it needs the next period data to
+   * continue processing the buffer.
+   */
+  private boolean isSeekToHelioAdEdgeWorkaround(
+      MediaPeriodHolder playingPeriodHolder,
+      MediaPeriodHolder nextPlayingPeriodHolder,
+      MediaPeriodHolder readingPeriodHolder) {
+    // Check that period holders are in the proper state for this workaround
+    if (!playingPeriodHolder.prepared || !readingPeriodHolder.prepared) {
+      return false;
+    }
+    // Only check for Ads (AdMediaPeriod is only used by AdsMediaSource so we can assume
+    // the next period is an ad period).
+    if (!(nextPlayingPeriodHolder.mediaPeriod instanceof AdMediaPeriod)
+        || (playingPeriodHolder.mediaPeriod instanceof AdMediaPeriod)) {
+      return false;
+    }
+
+    // Check if we need to adjust the render position because of an stalled pre-roll
+    if (rendererPositionUs < 0 && nextPlayingPeriodHolder.getStartPositionRendererTime() <= 1) {
+      Log.w(TAG, "isRendererStalledSeekEdgeWorkaround: renderer stalled detected (pre-roll)");
+      flushAndUpdateRendererPositionForSeekToHelioAdEdgeWorkaround(readingPeriodHolder, nextPlayingPeriodHolder);
+      return true;
+    }
+
+    int finishedRenderers = 0;
+    int stalledRenderers = renderers.length;
+    for (Renderer renderer : renderers) {
+      stalledRenderers--;
+      if (renderer.getStream() != null) {
+        if (renderer.isReady()
+            && !renderer.isEnded()
+            && !renderer.isCurrentStreamFinal()
+            && !renderer.hasReadStreamToEnd()
+            && renderer.getReadingPositionUs() != C.TIME_END_OF_SOURCE) {
+          Long lastKnownRendererReadingPositionUs = lastKnownReadingPositionUs.get(renderer);
+          lastKnownReadingPositionUs.put(renderer, renderer.getReadingPositionUs());
+          if (lastKnownRendererReadingPositionUs != null
+              && lastKnownRendererReadingPositionUs == renderer.getReadingPositionUs()) {
+            long elapsedRealtime = SystemClock.elapsedRealtime();
+            if (!lastKnownReadingStallTimestamp.containsKey(renderer)) {
+              lastKnownReadingStallTimestamp.put(renderer, elapsedRealtime);
+            } else if ((elapsedRealtime - lastKnownReadingStallTimestamp.get(renderer)) > FORCE_RESET_WORKAROUND_TIMEOUT_MS) {
+              Log.i(TAG, "Detected renderer in an stalled state: " + renderer);
+              stalledRenderers++;
+            }
+          } else {
+            lastKnownReadingStallTimestamp.remove(renderer);
+          }
+        } else {
+          lastKnownReadingPositionUs.remove(renderer);
+          lastKnownReadingStallTimestamp.remove(renderer);
+        }
+      }
+
+      // Store already finished renderers
+      if (renderer.hasReadStreamToEnd()
+          && renderer.getReadingPositionUs() == C.TIME_END_OF_SOURCE) {
+        finishedRenderers++;
+      }
+    }
+
+    if (rendererPositionUs != nextPlayingPeriodHolder.getStartPositionRendererTime()
+        && (stalledRenderers > 0 && (renderers.length - finishedRenderers) == stalledRenderers
+        || finishedRenderers == renderers.length)) {
+      Log.w(TAG, "isRendererStalledSeekEdgeWorkaround: renderer stalled detected (mid-roll)");
+      flushAndUpdateRendererPositionForSeekToHelioAdEdgeWorkaround(readingPeriodHolder, nextPlayingPeriodHolder);
+      return true;
+    }
+    return false;
+  }
+
+  private void flushAndUpdateRendererPositionForSeekToHelioAdEdgeWorkaround(
+      MediaPeriodHolder readingPeriodHolder,
+      MediaPeriodHolder nextPlayingPeriodHolder) {
+    // Mark period as finished and update render position
+    clearSeekToHelioAdEdgeWorkaroundFlags();
+    setAllRendererStreamsFinal(
+        /* streamEndPositionUs= */ readingPeriodHolder.getStartPositionRendererTime());
+    rendererPositionUs = nextPlayingPeriodHolder.getStartPositionRendererTime();
   }
 
   private boolean hasReadingPeriodFinishedReading() {
