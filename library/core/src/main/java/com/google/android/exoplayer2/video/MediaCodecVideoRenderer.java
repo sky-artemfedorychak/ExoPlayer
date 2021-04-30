@@ -968,6 +968,7 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
   protected void onProcessedStreamChange() {
     super.onProcessedStreamChange();
     clearRenderedFirstFrame();
+    renderedFirstFrameAfterReset = true;
   }
 
   /**
