@@ -552,8 +552,17 @@ public final class CacheDataSource implements DataSource {
 
   @Override
   public long open(DataSpec dataSpec) throws IOException {
+    // Use old legacy cache key if present
+    // https://github.com/sky-uk/core-video-team-exoplayer/wiki/CVT-Contributions:-Features,-Backports,-Fixes-and-Workarounds#feature-parallel-segment-downloads
+    String key = cacheKeyFactory.buildLegacyCacheKey(dataSpec);
+    if (!cache.getKeys().contains(key)) {
+      key = cacheKeyFactory.buildCacheKey(dataSpec);
+    }
+    return internalOpen(dataSpec, key);
+  }
+
+  private long internalOpen(DataSpec dataSpec, String key) throws IOException {
     try {
-      String key = cacheKeyFactory.buildCacheKey(dataSpec);
       DataSpec requestDataSpec = dataSpec.buildUpon().setKey(key).build();
       this.requestDataSpec = requestDataSpec;
       actualUri = getRedirectedUriOrDefault(cache, key, /* defaultUri= */ requestDataSpec.uri);

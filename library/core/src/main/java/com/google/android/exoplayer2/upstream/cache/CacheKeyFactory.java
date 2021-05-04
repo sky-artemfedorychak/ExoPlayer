@@ -21,8 +21,20 @@ import com.google.android.exoplayer2.upstream.DataSpec;
 public interface CacheKeyFactory {
 
   /** Default {@link CacheKeyFactory}. */
-  CacheKeyFactory DEFAULT =
-      (dataSpec) -> dataSpec.key != null ? dataSpec.key : dataSpec.uri.toString();
+  CacheKeyFactory DEFAULT = new CacheKeyFactory() {
+    @Override
+    public String buildCacheKey(DataSpec dataSpec) {
+      return dataSpec.key != null ? dataSpec.key : dataSpec.uri.toString();
+    }
+
+    @Override
+    @Deprecated
+    public String buildLegacyCacheKey(DataSpec dataSpec) {
+      // Legacy cache key
+      // https://github.com/sky-uk/core-video-team-exoplayer/wiki/CVT-Contributions:-Features,-Backports,-Fixes-and-Workarounds#feature-parallel-segment-downloads
+      return dataSpec.key != null ? dataSpec.key : dataSpec.toLegacyString() + "-" + + dataSpec.absoluteStreamPosition;
+    }
+  };
 
   /**
    * Returns the cache key of the resource containing the data defined by a {@link DataSpec}.
@@ -36,4 +48,12 @@ public interface CacheKeyFactory {
    * @return The cache key of the resource.
    */
   String buildCacheKey(DataSpec dataSpec);
+
+  /**
+   * @deprecated Legacy code. To be removed in future versions
+   */
+  @Deprecated
+  default String buildLegacyCacheKey(DataSpec dataSpec) {
+    return buildCacheKey(dataSpec);
+  }
 }
