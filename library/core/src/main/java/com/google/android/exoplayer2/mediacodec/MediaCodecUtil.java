@@ -309,7 +309,11 @@ public final class MediaCodecUtil {
               mediaCodecList.isFeatureRequired(
                   CodecCapabilities.FEATURE_TunneledPlayback, codecMimeType, capabilities);
           if ((!key.tunneling && tunnelingRequired) || (key.tunneling && !tunnelingSupported)) {
-            continue;
+            // FIXME: remove the IF below, when the Technicolor applies the fix in theirs Firmware.
+            // To have support for the Tunnel Mode, in streams with DRM.
+            if (!name.contentEquals("OMX.Marvell.video_decoder.avc.secure")) {
+              continue;
+            }
           }
           boolean secureSupported =
               mediaCodecList.isFeatureSupported(

@@ -437,7 +437,7 @@ public class MediaCodecVideoRendererTest {
 
     // Expect only the first frame of the first stream to have been rendered.
     shadowLooper.idle();
-    verify(eventListener, times(2)).onRenderedFirstFrame(any());
+    verify(eventListener, times(1)).onRenderedFirstFrame(any());
   }
 
   @Test
@@ -494,6 +494,6 @@ public class MediaCodecVideoRendererTest {
     mediaCodecVideoRenderer.render(/* positionUs= */ 100, SystemClock.elapsedRealtime() * 1000);
 
     shadowLooper.idle();
-    verify(eventListener, times(2)).onRenderedFirstFrame(any());
+    verify(eventListener, times(1)).onRenderedFirstFrame(any());
   }
 }

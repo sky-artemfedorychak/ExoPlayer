@@ -331,6 +331,10 @@ public abstract class Representation {
       return segmentBase.getSegmentNum(timeUs, periodDurationUs);
     }
 
+    public long getReportedSegmentDurationMs() {
+      return segmentBase.duration;
+    }
+
     @Override
     public long getTimeUs(long segmentIndex) {
       return segmentBase.getSegmentTimeUs(segmentIndex);

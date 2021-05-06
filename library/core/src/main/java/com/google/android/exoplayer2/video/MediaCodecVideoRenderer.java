@@ -968,6 +968,7 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
   protected void onProcessedStreamChange() {
     super.onProcessedStreamChange();
     clearRenderedFirstFrame();
+    renderedFirstFrameAfterReset = true;
   }
 
   /**
@@ -1613,10 +1614,30 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
           break; // Do nothing.
       }
     }
-    if (Util.SDK_INT <= 27 && "HWEML".equals(Util.DEVICE)) {
-      // Workaround for Huawei P20:
-      // https://github.com/google/ExoPlayer/issues/4468#issuecomment-459291645.
+    if (Util.SDK_INT <= 27 &&
+        // Workaround for Huawei P20:
+        // https://github.com/google/ExoPlayer/issues/4468#issuecomment-459291645.
+        ("HWEML".equals(Util.DEVICE) ||
+        // Workaround for Alco devices
+        // https://github.com/google/ExoPlayer/issues/6930#issuecomment-611249518
+        ("RCA".equals(Util.MANUFACTURER) && Util.DEVICE.startsWith("RCT"))
+    )) {
       return true;
+    }
+    if (Util.SDK_INT >= 27) {
+      // Workaround for several Amazon devices:
+      // https://github.com/amzn/exoplayer-amazon-port/commit/52bd718a20e7253ba7129a322da51bfc1464728b
+      switch (Util.MODEL){
+        case "AFTR":
+        case "AFTSO001":
+        case "AFTEU014":
+        case "AFTEUFF014":
+        case "AFTEU011":
+          return true;
+        default:
+          // Do nothing.
+          break;
+      }
     }
     if (Util.SDK_INT <= 26) {
       // In general, devices running API level 27 or later should be unaffected unless observed
@@ -1787,6 +1808,9 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
         case "AFTA":
         case "AFTN":
         case "JSN-L21":
+        // https://github.com/amzn/exoplayer-amazon-port/commit/52bd718a20e7253ba7129a322da51bfc1464728b
+        case "AFTJMST12":
+        case "AFTKMST12":
           return true;
         default:
           break; // Do nothing.

@@ -23,6 +23,7 @@ import com.google.android.exoplayer2.util.Assertions;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -791,5 +792,34 @@ public final class DataSpec {
         + ", "
         + flags
         + "]";
+  }
+
+  /**
+   * For use with legacy cache key.
+   * https://github.com/sky-uk/core-video-team-exoplayer/wiki/CVT-Contributions:-Features,-Backports,-Fixes-and-Workarounds#feature-parallel-segment-downloads
+   *
+   * TechDebt Ticket: https://github.com/sky-uk/core-video-team/issues/6696
+   *
+   * @deprecated Legacy code. To be removed in future versions
+   */
+  @Deprecated()
+  public String toLegacyString() {
+    return "DataSpec["
+            + getHttpMethodString()
+            + " "
+            + uri
+            + ", "
+            + Arrays.toString(httpBody)
+            + ", "
+            + absoluteStreamPosition
+            + ", "
+            + position
+            + ", "
+            + length
+            + ", "
+            + key
+            + ", "
+            + flags
+            + "]";
   }
 }

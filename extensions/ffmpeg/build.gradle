@@ -30,6 +30,10 @@ dependencies {
 }
 
 ext {
+    releaseArtifact = 'extension-ffmpeg'
+    releaseDescription = 'FFmpeg extension for ExoPlayer.'
     javadocTitle = 'FFmpeg extension'
 }
 apply from: '../../javadoc_library.gradle'
+apply from: '../../publish.gradle'
+apply from: '../../artifactory.gradle'

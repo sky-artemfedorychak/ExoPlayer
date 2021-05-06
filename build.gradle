@@ -19,6 +19,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:4.0.1'
         classpath 'com.google.android.gms:strict-version-matcher-plugin:1.2.1'
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4.9.8"
     }
 }
 allprojects {
@@ -35,4 +36,24 @@ allprojects {
     group = 'com.google.android.exoplayer'
 }
 
+task readVersion {
+    doLast {
+        println getVersionString()
+    }
+}
+
+project.ext.getCheckedOutGitCommitHash = {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short=7', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
+project.ext.getVersionString = {
+    return project.ext.releaseVersion + "-cvsdk-" + getCheckedOutGitCommitHash()
+}
+
 apply from: 'javadoc_combined.gradle'
+apply from: 'constants.gradle'

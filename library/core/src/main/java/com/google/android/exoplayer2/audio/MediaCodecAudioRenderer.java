@@ -17,6 +17,8 @@ package com.google.android.exoplayer2.audio;
 
 import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.DISCARD_REASON_MAX_INPUT_SIZE_EXCEEDED;
 import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.REUSE_RESULT_NO;
+import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.REUSE_RESULT_YES_WITH_FLUSH;
+import static com.google.android.exoplayer2.decoder.DecoderReuseEvaluation.REUSE_RESULT_YES_WITH_RECONFIGURATION;
 import static com.google.android.exoplayer2.util.Assertions.checkNotNull;
 import static java.lang.Math.max;
 
@@ -50,6 +52,7 @@ import com.google.android.exoplayer2.mediacodec.MediaCodecSelector;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil.DecoderQueryException;
 import com.google.android.exoplayer2.mediacodec.MediaFormatUtil;
+import com.google.android.exoplayer2.util.Assertions;
 import com.google.android.exoplayer2.util.MediaClock;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.Util;
@@ -374,6 +377,14 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
       discardReasons |= DISCARD_REASON_MAX_INPUT_SIZE_EXCEEDED;
     }
 
+    // Some devices require a lower reuse level than they should. This
+    // modifies the evaluation result on those devices if required.
+    if (evaluation.result == REUSE_RESULT_YES_WITH_FLUSH) {
+      if (codecNeedsReconfigurationWhileNotWaitingForDrainEosStateWorkaround(codecInfo.mimeType)) {
+        evaluation = evaluation.copyWithResult(REUSE_RESULT_YES_WITH_RECONFIGURATION);
+      }
+    }
+
     return new DecoderReuseEvaluation(
         codecInfo.name,
         oldFormat,
@@ -468,7 +479,17 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
       }
     }
     try {
-      audioSink.configure(audioSinkInputFormat, /* specifiedBufferSize= */ 0, channelMap);
+      // There an issue in FireTV for assets with less than <5 seconds and with surround audio
+      // tracks that causes the playback to freeze. This workaround the bug by providing a
+      // buffer size, instead of allow AudioSink to determine it.
+      // Default seems to be 196000 for the maximum bitrate of 6.4Mbit/sec for EAC3.
+      // As I have never seen audio with bitrates above a 1 megabit, I think we should be safe
+      // with lower numbers. For comparision, AC3 uses 20000 for buffer size.
+      @C.Encoding
+      int encoding = MimeTypes.getEncoding(Assertions.checkNotNull(
+          audioSinkInputFormat.sampleMimeType), audioSinkInputFormat.codecs);
+      int specifiedBufferSize = encoding == C.ENCODING_E_AC3 ? 118000 : 0;
+      audioSink.configure(audioSinkInputFormat, specifiedBufferSize, channelMap);
     } catch (AudioSink.ConfigurationException e) {
       throw createRendererException(e, e.format);
     }
@@ -808,6 +829,30 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
         && (Util.DEVICE.startsWith("zeroflte")
             || Util.DEVICE.startsWith("herolte")
             || Util.DEVICE.startsWith("heroqlte"));
+  }
+
+  /**
+   * Returns whether EAC3 codecs incorrectly process discontinuity events requiring
+   * a codec reconfiguration instead of just a buffer flush.
+   *
+   * @param mimeType The mime type of the codec.
+   * @return True if is known to cause this issue.
+   */
+  private boolean codecNeedsReconfigurationWhileNotWaitingForDrainEosStateWorkaround(String mimeType) {
+    // Hisense AndroidTV 8
+    boolean hisense = Util.SDK_INT <= 26  && ("Hisense".equals(Util.MANUFACTURER) && ("laoshan".equals(Util.DEVICE) || "xinhaoshan".equals(Util.DEVICE)));
+    // MiBox 3
+    boolean xiaomi = Util.SDK_INT <= 26  && ("Xiaomi".equals(Util.MANUFACTURER) && "once".equals(Util.DEVICE));
+    // Sony Bravia
+    boolean bravia = Util.SDK_INT <= 26  && ("Sony".equals(Util.MANUFACTURER) && Util.MODEL.toLowerCase().startsWith("bravia"));
+    // Amazon FireTV devices
+    boolean amazon = "Amazon".equals(Util.MANUFACTURER) && Util.MODEL.startsWith("AFT");
+    // Google TV Sabrina - Chromecast
+    boolean sabrina = Util.MODEL.toLowerCase().startsWith("chromecast");
+
+    return (MimeTypes.AUDIO_E_AC3.equals(mimeType) || MimeTypes.AUDIO_AC3.equals(mimeType))
+        && isNeitherDrainingNorWaitingForEosState()
+        && (hisense || xiaomi || bravia || amazon || sabrina);
   }
 
   private final class AudioSinkListener implements AudioSink.Listener {

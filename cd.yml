@@ -1,0 +1,13 @@
+version: 1
+context: core-video-sdk
+triggering: multibranch
+
+defaultNodes:
+  default: core-video-sdk-android-slave
+
+modules:
+  exoplayer:
+    pipelineShape: build-release
+    directory: /
+    nodes:
+      default: core-video-sdk-android-slave

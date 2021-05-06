@@ -1,0 +1,119 @@
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+    archiveName = "$releaseArtifact-${getVersionString()}-sources.jar"
+}
+
+task javadoc(type: Javadoc) {
+    failOnError false
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    from javadoc.destinationDir
+    classifier = 'javadoc'
+    archiveName = "$releaseArtifact-${getVersionString()}-javadoc.jar"
+}
+
+publishing {
+    publications {
+        aarRelease(MavenPublication) {
+            groupId = group
+            artifactId = releaseArtifact
+            version = getVersionString()
+            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+            artifact source: sourcesJar, classifier: 'sources', extension: 'jar'
+            artifact source: javadocJar, classifier: 'javadoc', extension: 'jar'
+            addAllProjectDependenciesToPom(pom, configurations, "${groupId}", "${artifactId}", "${version}")
+            pom {
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
+        }
+    }
+}
+
+artifactoryPublish {
+    publications(publishing.publications.aarRelease)
+}
+
+artifactory {
+    if (project.hasProperty('artifactory_url')) {
+        contextUrl = artifactory_url
+
+        publish {
+            repository {
+                repoKey = artifactory_path
+                username = artifactory_username
+                password = artifactory_password
+            }
+            defaults {
+                publications('aarRelease')
+                publishPom = true
+            }
+        }
+    }
+}
+
+def addAllProjectDependenciesToPom(pom, ConfigurationContainer configurations, libraryGroupId, libraryArtifactId, libraryVersion) {
+    pom.withXml { provider ->
+        def dependenciesNode = provider.asNode().appendNode('dependencies')
+
+        def allPrevDeps = []
+        addAllDependenciesForConfiguration(dependenciesNode, configurations.api, libraryGroupId, libraryArtifactId, libraryVersion, "compile", allPrevDeps)
+        addAllDependenciesForConfiguration(dependenciesNode, configurations.implementation, libraryGroupId, libraryArtifactId, libraryVersion, "runtime", allPrevDeps)
+        addAllDependenciesForConfiguration(dependenciesNode, configurations.provided, libraryGroupId, libraryArtifactId, libraryVersion, "provided", allPrevDeps)
+    }
+}
+
+// Iterate through a configuration and add dependencies to pom
+def addAllDependenciesForConfiguration(dependenciesNode, Configuration configuration, libraryGroupId, libraryArtifactId, libraryVersion, scope, allPrevDeps) {
+    configuration.allDependencies.withType(ModuleDependency).each { dep ->
+        if (!allPrevDeps.contains(dep)) {
+            if (dep instanceof ProjectDependency) {
+                // If project dependency, use dependency from remote
+                addDependencyNodeToPom(dependenciesNode, libraryGroupId, dep.dependencyProject.ext.releaseArtifact, libraryVersion, scope, dep)
+            } else if (dep instanceof ExternalModuleDependency) {
+                if (dep.group?.trim() && dep.name?.trim() && dep.version?.trim()) {
+                    // TODO: Hotfix for bundled aars' https://github.com/sky-uk/core-video-team/issues/2385
+                    addDependencyNodeToPom(dependenciesNode, dep.group, dep.name, dep.version, scope, dep)
+                }
+            }
+        }
+        allPrevDeps.add(dep)
+    }
+}
+
+// Creates dependency node with scope, groupId, artifactId, version, & scope.
+def addDependencyNodeToPom(dependenciesNode, group, artifact, version, scope, dep) {
+    def dependencyNode = dependenciesNode.appendNode('dependency')
+    dependencyNode.appendNode("groupId", group)
+    dependencyNode.appendNode("artifactId", artifact)
+    dependencyNode.appendNode("version", version)
+    dependencyNode.appendNode("scope", scope)
+    applyExcludedDependencies(dependencyNode, dep)
+}
+
+def applyExcludedDependencies(dependencyNode, dep) {
+    if (!dep.excludeRules.isEmpty()) {
+        def exclusions = dependencyNode.appendNode('exclusions')
+        dep.excludeRules.each { ExcludeRule ex ->
+            def exclusion = exclusions.appendNode('exclusion')
+            logger.info("Add exclusion [group:" + ex.group + ", module:" + ex.module + "] for dependency \"$dep.name\"")
+            exclusion.appendNode('groupId', ex.group)
+            if (ex.module != null && !ex.module.isEmpty()) {
+                exclusion.appendNode('artifactId', ex.module)
+            } else {
+                exclusion.appendNode('artifactId', "*")
+            }
+        }
+    }
+}

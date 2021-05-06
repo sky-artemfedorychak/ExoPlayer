@@ -172,7 +172,21 @@ public class DashManifestParser extends DefaultHandler
           long periodDurationMs = periodWithDurationMs.second;
           nextPeriodStartMs = periodDurationMs == C.TIME_UNSET ? C.TIME_UNSET
               : (period.startMs + periodDurationMs);
-          periods.add(period);
+
+          // Details:
+          //    - https://github.comcast.com/viper-player/playerplatform_android/issues/2567
+          //    - https://github.comcast.com/viper-player/helio_android/issues/483
+          //
+          // There is currently a bug where segments are stripped out from a period right before it
+          // falls out of the live window. Since this is against DASH spec, it causes Exo to fail
+          // playback. This method contains all of the regular MPD parsing found in
+          // DashManifestParser, with a couple of extra lines to filter out periods without
+          // adaptation sets.
+          // Ensure that we don't orphan event streams that are still open and valid - dependent
+          // on timing being based on PTS.
+          if (period.adaptationSets!= null && !period.adaptationSets.isEmpty()) {
+            periods.add(period);
+          }
         }
       } else {
         maybeSkipTag(xpp);
@@ -1754,12 +1768,12 @@ public class DashManifestParser extends DefaultHandler
 
   protected static int parseInt(XmlPullParser xpp, String name, int defaultValue) {
     String value = xpp.getAttributeValue(null, name);
-    return value == null ? defaultValue : Integer.parseInt(value);
+    return value == null ? defaultValue : (int) Double.parseDouble(value);
   }
 
   protected static long parseLong(XmlPullParser xpp, String name, long defaultValue) {
     String value = xpp.getAttributeValue(null, name);
-    return value == null ? defaultValue : Long.parseLong(value);
+    return value == null ? defaultValue : (long) Double.parseDouble(value);
   }
 
   protected static float parseFloat(XmlPullParser xpp, String name, float defaultValue) {
