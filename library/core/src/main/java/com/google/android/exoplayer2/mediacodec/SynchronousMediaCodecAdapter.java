@@ -146,6 +146,11 @@ public final class SynchronousMediaCodecAdapter implements MediaCodecAdapter {
   public void release() {
     inputByteBuffers = null;
     outputByteBuffers = null;
+    try {
+      codec.stop();
+    } catch (IllegalStateException ex) {
+      // ignore
+    }
     codec.release();
   }
 
