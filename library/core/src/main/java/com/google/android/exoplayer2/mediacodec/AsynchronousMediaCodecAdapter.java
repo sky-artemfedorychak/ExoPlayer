@@ -229,6 +229,11 @@ import java.nio.ByteBuffer;
       state = STATE_SHUT_DOWN;
     } finally {
       if (!codecReleased) {
+        try {
+          codec.stop();
+        } catch (IllegalStateException ex) {
+          // ignore
+        }
         codec.release();
         codecReleased = true;
       }
