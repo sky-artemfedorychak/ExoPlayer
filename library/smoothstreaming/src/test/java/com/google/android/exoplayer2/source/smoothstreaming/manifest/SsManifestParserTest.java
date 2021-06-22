@@ -29,6 +29,8 @@ public final class SsManifestParserTest {
 
   private static final String SAMPLE_ISMC_1 = "media/smooth-streaming/sample_ismc_1";
   private static final String SAMPLE_ISMC_2 = "media/smooth-streaming/sample_ismc_2";
+  private static final String SAMPLE_ISMC_3 = "media/smooth-streaming/sample_ismc_3";
+  private static final String SAMPLE_ISMC_4 = "media/smooth-streaming/sample_ismc_4";
 
   /** Simple test to ensure the sample manifests parse without any exceptions being thrown. */
   @Test
@@ -40,5 +42,18 @@ public final class SsManifestParserTest {
     parser.parse(
         Uri.parse("https://example.com/test.ismc"),
         TestUtil.getInputStream(ApplicationProvider.getApplicationContext(), SAMPLE_ISMC_2));
+  }
+
+  @Test
+  public void parseMultipleAudiosAndSubtitlesAssetsSmoothStreamingManifest() throws IOException {
+    SsManifestParser parser = new SsManifestParser();
+
+    parser.parse(
+        Uri.parse("https://example.com/test.ismc"),
+        TestUtil.getInputStream(ApplicationProvider.getApplicationContext(), SAMPLE_ISMC_3));
+
+    parser.parse(
+        Uri.parse("https://example.com/test.ismc"),
+        TestUtil.getInputStream(ApplicationProvider.getApplicationContext(), SAMPLE_ISMC_4));
   }
 }

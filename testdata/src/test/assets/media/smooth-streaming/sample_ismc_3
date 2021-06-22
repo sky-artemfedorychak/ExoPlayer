@@ -1,0 +1,81 @@
+<SmoothStreamingMedia MajorVersion="2" MinorVersion="0" Duration="0" TimeScale="10000000" IsLive="TRUE" LookAheadFragmentCount="2" DVRWindowLength="300000000" CanSeek="TRUE" CanPause="TRUE">
+<StreamIndex Type="text" Name="qpc_1021_150" Language="qpc" Subtype="CAPT" Chunks="0" TimeScale="10000000" Url="QualityLevels({bitrate})/Fragments(qpc_1021_150={start time})">
+<QualityLevel Index="0" Bitrate="15000" CodecPrivateData="" FourCC="TTML"/>
+<c d="20000000" t="3249874400000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+</StreamIndex>
+<StreamIndex Type="video" Name="video" Language="und" Subtype="" Chunks="0" TimeScale="10000000" Url="QualityLevels({bitrate})/Fragments(video={start time})">
+<QualityLevel Index="0" Bitrate="90000" CodecPrivateData="00000001674d40209e52820276028404040500000300010000030032e000057e000afc3f13e0a00000000168ef7520" FourCC="AVC1" MaxWidth="256" MaxHeight="144"/>
+<QualityLevel Index="1" Bitrate="45000" CodecPrivateData="00000001674d40209e528417f2e028404040500000030010000003032e0000afc0057e3f13e0a00000000168ef7520" FourCC="AVC1" MaxWidth="128" MaxHeight="72"/>
+<QualityLevel Index="2" Bitrate="350000" CodecPrivateData="00000001674d40209e5281004b6028404040500000030010000003032e0000155c0002ab83f13e0a0000000168ef7520" FourCC="AVC1" MaxWidth="512" MaxHeight="288"/>
+<QualityLevel Index="3" Bitrate="1850000" CodecPrivateData="00000001674d40209e5280800936028404040500000300010000030032e0200070ea0001c3a8fc4f82800000000168ef7520" FourCC="AVC1" MaxWidth="1024" MaxHeight="576"/>
+<QualityLevel Index="4" Bitrate="3000000" CodecPrivateData="0000000167640020ac3ca5014016ec050808080a00000300020000030065c080005b8d8000b71b7e27c1400000000168ef7525" FourCC="AVC1" MaxWidth="1280" MaxHeight="720"/>
+<QualityLevel Index="5" Bitrate="860000" CodecPrivateData="00000001674d40209e5281806f6028404040500000030010000003032e00000d1f400068fa3f13e0a00000000168ef7520" FourCC="AVC1" MaxWidth="768" MaxHeight="432"/>
+<QualityLevel Index="6" Bitrate="4830000" CodecPrivateData="0000000167640020ac3ca5014016ec050808080a00000300020000030065c4c00049b3000093667e27c1400000000168ef7525" FourCC="AVC1" MaxWidth="1280" MaxHeight="720"/>
+<QualityLevel Index="7" Bitrate="7830000" CodecPrivateData="0000000167640029ac3ca501e0089f9701420202028000000300800000197130001dde60003bbcdf89f0500000000168ef7525" FourCC="AVC1" MaxWidth="1920" MaxHeight="1080"/>
+<c d="20000000" t="3249874396646586"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+<c d="20000000"/>
+</StreamIndex>
+<StreamIndex Type="audio" Name="audio_eng" Language="eng" Subtype="" Chunks="0" TimeScale="10000000" Url="QualityLevels({bitrate})/Fragments(audio_eng={start time})">
+<QualityLevel Index="0" Bitrate="96000" CodecPrivateData="1190" FourCC="AACL" AudioTag="255" Channels="2" SamplingRate="48000" BitsPerSample="16" PacketSize="4"/>
+<c d="20053333" t="3249874400059920"/>
+<c d="20053333"/>
+<c d="19840000"/>
+<c d="20053334"/>
+<c d="20053333"/>
+<c d="20053333"/>
+<c d="19840000"/>
+<c d="20053334"/>
+<c d="20053333"/>
+<c d="20053333"/>
+<c d="19840000"/>
+<c d="20053334"/>
+<c d="20053333"/>
+<c d="20053333"/>
+<c d="19840000"/>
+</StreamIndex>
+<StreamIndex Type="audio" Name="audio_deu" Language="deu" Subtype="" Chunks="0" TimeScale="10000000" Url="QualityLevels({bitrate})/Fragments(audio_deu={start time})">
+<QualityLevel Index="0" Bitrate="96000" CodecPrivateData="1190" FourCC="AACL" AudioTag="255" Channels="2" SamplingRate="48000" BitsPerSample="16" PacketSize="4"/>
+<c d="20053333" t="3249874400059920"/>
+<c d="20053333"/>
+<c d="19840000"/>
+<c d="20053334"/>
+<c d="20053333"/>
+<c d="20053333"/>
+<c d="19840000"/>
+<c d="20053334"/>
+<c d="20053333"/>
+<c d="20053333"/>
+<c d="19840000"/>
+<c d="20053334"/>
+<c d="20053333"/>
+<c d="20053333"/>
+<c d="19840000"/>
+</StreamIndex>
+</SmoothStreamingMedia>
