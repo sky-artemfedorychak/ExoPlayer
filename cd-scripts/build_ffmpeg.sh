@@ -40,10 +40,9 @@ HOST_PLATFORM=${NDK_OS}-${HOSTTYPE}
 ENABLED_DECODERS=(ac3 eac3)
 FFMPEG_BRANCH="release/4.2"
 
-echo "${FFMPEG_EXT_PATH}/jni"
 cd "${FFMPEG_EXT_PATH}/jni"
 if [ ! -d "ffmpeg" ]; then
- git clone git://source.ffmpeg.org/ffmpeg && \
+  git clone git://source.ffmpeg.org/ffmpeg && \
     cd ffmpeg && \
     git checkout -f ${FFMPEG_BRANCH}
 else
@@ -60,5 +59,12 @@ if [ -f "${FFMPEG_EXT_PATH}/jni/Android.mk" ]; then
   cd "${FFMPEG_EXT_PATH}/jni" && \
     ${ANDROID_NDK_HOME}/ndk-build APP_ABI="armeabi-v7a arm64-v8a x86 x86_64" -j4
 fi
+
+# There is an issue with some Git versions behaving incorrectly when
+# there are other git repositories inside one git repository.
+# To avoid issues, just clear up all cloned data, as we only need
+# binaries from here on.
+cd "${project_dir}"
+rm -Rf "${FFMPEG_EXT_PATH}/jni/ffmpeg"
 
 exit ${exitCode}
