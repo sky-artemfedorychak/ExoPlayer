@@ -47,9 +47,9 @@ function isProtectedBranch() {
   return ${result}
 }
 
-function isDevelop() {
+function isSkyBranch() {
   echo "Is this a snapshottable branch?"
-  snapshot_release_branch_pattern="origin/sky/develop$"
+  snapshot_release_branch_pattern="origin/sky/.*$"
   current_revision=$(git rev-parse HEAD)
   set +e
   git branch --remotes --contains ${current_revision} | grep ${snapshot_release_branch_pattern}
@@ -88,7 +88,7 @@ cd $project_dir
 
 bundle install  --deployment
 
-if isDevelop || isSnapshotCommit; then
+if isSkyBranch || isSnapshotCommit; then
   echo "Yes"
   echo ">>>> DEPLOYING SNAPSHOT <<<<"
   $script_dir/build_ffmpeg.sh

@@ -1,63 +1,65 @@
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 
-task sourcesJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    classifier = 'sources'
-    archiveName = "$releaseArtifact-${getVersionString()}-sources.jar"
-}
+if (IMPORT_LOCAL_EXOPLAYER == "false") {
+    task sourcesJar(type: Jar) {
+        from android.sourceSets.main.java.srcDirs
+        classifier = 'sources'
+        archiveName = "$releaseArtifact-${getVersionString()}-sources.jar"
+    }
 
-task javadoc(type: Javadoc) {
-    failOnError false
-    source = android.sourceSets.main.java.srcDirs
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-}
+    task javadoc(type: Javadoc) {
+        failOnError false
+        source = android.sourceSets.main.java.srcDirs
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    }
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    from javadoc.destinationDir
-    classifier = 'javadoc'
-    archiveName = "$releaseArtifact-${getVersionString()}-javadoc.jar"
-}
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        from javadoc.destinationDir
+        classifier = 'javadoc'
+        archiveName = "$releaseArtifact-${getVersionString()}-javadoc.jar"
+    }
 
-publishing {
-    publications {
-        aarRelease(MavenPublication) {
-            groupId = group
-            artifactId = releaseArtifact
-            version = getVersionString()
-            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
-            artifact source: sourcesJar, classifier: 'sources', extension: 'jar'
-            artifact source: javadocJar, classifier: 'javadoc', extension: 'jar'
-            addAllProjectDependenciesToPom(pom, configurations, "${groupId}", "${artifactId}", "${version}")
-            pom {
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    publishing {
+        publications {
+            aarRelease(MavenPublication) {
+                groupId = group
+                artifactId = releaseArtifact
+                version = getVersionString()
+                artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+                artifact source: sourcesJar, classifier: 'sources', extension: 'jar'
+                artifact source: javadocJar, classifier: 'javadoc', extension: 'jar'
+                addAllProjectDependenciesToPom(pom, configurations, "${groupId}", "${artifactId}", "${version}")
+                pom {
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
                     }
                 }
             }
         }
     }
-}
 
-artifactoryPublish {
-    publications(publishing.publications.aarRelease)
-}
+    artifactoryPublish {
+        publications(publishing.publications.aarRelease)
+    }
 
-artifactory {
-    if (project.hasProperty('artifactory_url')) {
-        contextUrl = artifactory_url
+    artifactory {
+        if (project.hasProperty('artifactory_url')) {
+            contextUrl = artifactory_url
 
-        publish {
-            repository {
-                repoKey = artifactory_path
-                username = artifactory_username
-                password = artifactory_password
-            }
-            defaults {
-                publications('aarRelease')
-                publishPom = true
+            publish {
+                repository {
+                    repoKey = artifactory_path
+                    username = artifactory_username
+                    password = artifactory_password
+                }
+                defaults {
+                    publications('aarRelease')
+                    publishPom = true
+                }
             }
         }
     }
