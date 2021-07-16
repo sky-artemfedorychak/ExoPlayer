@@ -211,6 +211,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
   private long setForegroundModeTimeoutMs;
 
   // Helio seek to ad edge workaround flags
+  private long lastKnownRendererPositionUs = 0L;
   private final Map<Renderer, Long> lastKnownReadingPositionUs = new HashMap<>();
   private final Map<Renderer, Long> lastKnownReadingStallTimestamp = new HashMap<>();
   /**
@@ -876,6 +877,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
         playbackInfoUpdate.setPositionDiscontinuity(Player.DISCONTINUITY_REASON_INTERNAL);
       }
     } else {
+      lastKnownRendererPositionUs = rendererPositionUs;
       rendererPositionUs =
           mediaClock.syncAndGetPositionUs(
               /* isReadingAhead= */ playingPeriodHolder != queue.getReadingPeriod());
@@ -1292,6 +1294,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
   private void resetRendererPosition(long periodPositionUs) throws ExoPlaybackException {
     MediaPeriodHolder playingMediaPeriod = queue.getPlayingPeriod();
+    lastKnownRendererPositionUs = rendererPositionUs;
     rendererPositionUs =
         playingMediaPeriod == null
             ? periodPositionUs
@@ -1369,6 +1372,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
     handler.removeMessages(MSG_DO_SOME_WORK);
     isRebuffering = false;
     mediaClock.stop();
+    lastKnownRendererPositionUs = 0L;
     rendererPositionUs = 0;
     for (Renderer renderer : renderers) {
       try {
@@ -2163,6 +2167,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
       return true;
     }
 
+    if (rendererPositionUs != lastKnownRendererPositionUs) {
+      return false;
+    }
+
     int finishedRenderers = 0;
     int stalledRenderers = renderers.length;
     for (Renderer renderer : renderers) {
@@ -2217,6 +2225,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
     clearSeekToHelioAdEdgeWorkaroundFlags();
     setAllRendererStreamsFinal(
         /* streamEndPositionUs= */ readingPeriodHolder.getStartPositionRendererTime());
+    lastKnownRendererPositionUs = rendererPositionUs;
     rendererPositionUs = nextPlayingPeriodHolder.getStartPositionRendererTime();
   }
 
