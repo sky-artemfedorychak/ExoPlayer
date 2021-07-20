@@ -97,7 +97,7 @@ public class SsManifestParser implements ParsingLoadable.Parser<SsManifest> {
     private final String baseUri;
     private final String tag;
 
-    @Nullable protected final ElementParser parent;
+    @Nullable private final ElementParser parent;
     private final List<Pair<String, @NullableType Object>> normalizedAttributes;
 
     public ElementParser(@Nullable ElementParser parent, String baseUri, String tag) {
@@ -668,7 +668,6 @@ public class SsManifestParser implements ParsingLoadable.Parser<SsManifest> {
 
       @Nullable String sampleMimeType = fourCCToMimeType(parseRequiredString(parser, KEY_FOUR_CC));
       int type = (Integer) getNormalizedAttribute(KEY_TYPE);
-      String formatId = parser.getAttributeValue(null, KEY_INDEX);
       if (type == C.TRACK_TYPE_VIDEO) {
         List<byte[]> codecSpecificData = buildCodecSpecificData(
             parser.getAttributeValue(null, KEY_CODEC_PRIVATE_DATA));
@@ -678,7 +677,6 @@ public class SsManifestParser implements ParsingLoadable.Parser<SsManifest> {
             .setHeight(parseRequiredInt(parser, KEY_MAX_HEIGHT))
             .setInitializationData(codecSpecificData);
       } else if (type == C.TRACK_TYPE_AUDIO) {
-        formatId = getIdWithLanguagePrefix(formatId);
         if (sampleMimeType == null) {
           // If we don't know the MIME type, assume AAC.
           sampleMimeType = MimeTypes.AUDIO_AAC;
@@ -698,7 +696,6 @@ public class SsManifestParser implements ParsingLoadable.Parser<SsManifest> {
             .setSampleRate(sampleRate)
             .setInitializationData(codecSpecificData);
       } else if (type == C.TRACK_TYPE_TEXT) {
-        formatId = getIdWithLanguagePrefix(formatId);
         @C.RoleFlags int roleFlags = 0;
         @Nullable String subType = (String) getNormalizedAttribute(KEY_SUB_TYPE);
         if (subType != null) {
@@ -720,20 +717,12 @@ public class SsManifestParser implements ParsingLoadable.Parser<SsManifest> {
 
       format =
           formatBuilder
-              .setId(formatId)
+              .setId(parser.getAttributeValue(null, KEY_INDEX))
               .setLabel((String) getNormalizedAttribute(KEY_NAME))
               .setSampleMimeType(sampleMimeType)
               .setAverageBitrate(parseRequiredInt(parser, KEY_BITRATE))
               .setLanguage((String) getNormalizedAttribute(KEY_LANGUAGE))
               .build();
-    }
-
-    private String getIdWithLanguagePrefix(String formatId) {
-      final String language = (String) this.parent.getNormalizedAttribute(KEY_LANGUAGE);
-      if (language != null) {
-        formatId = String.format("%s_%s", language, formatId);
-      }
-      return formatId;
     }
 
     @Override
