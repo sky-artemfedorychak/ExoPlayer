@@ -27,6 +27,8 @@ import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.SeekParameters;
 import com.google.android.exoplayer2.drm.DrmSessionEventListener;
 import com.google.android.exoplayer2.drm.DrmSessionManager;
+import com.google.android.exoplayer2.offline.DashDownloadFilter;
+import com.google.android.exoplayer2.offline.DashDownloadMediaPeriod;
 import com.google.android.exoplayer2.offline.StreamKey;
 import com.google.android.exoplayer2.source.CompositeSequenceableLoaderFactory;
 import com.google.android.exoplayer2.source.EmptySampleStream;
@@ -71,7 +73,8 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
 /* package */ final class DashMediaPeriod
     implements MediaPeriod,
         SequenceableLoader.Callback<ChunkSampleStream<DashChunkSource>>,
-        ChunkSampleStream.ReleaseCallback<DashChunkSource> {
+        ChunkSampleStream.ReleaseCallback<DashChunkSource>,
+        DashDownloadMediaPeriod {
 
   // Defined by ANSI/SCTE 214-1 2016 7.2.3.
   private static final Pattern CEA608_SERVICE_DESCRIPTOR_REGEX = Pattern.compile("CC([1-4])=(.+)");
@@ -144,6 +147,13 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
         buildTrackGroups(drmSessionManager, period.adaptationSets, eventStreams);
     trackGroups = result.first;
     trackGroupInfos = result.second;
+  }
+
+  // PEACOCK WORK AROUND FOR https://github.com/google/ExoPlayer/issues/9284
+  // REMOVE WHEN THIS ISSUE IS RESOLVED
+  @Override
+  public Object[] getTrackInfoArray() {
+    return trackGroupInfos;
   }
 
   /**
@@ -892,7 +902,7 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
     return new ChunkSampleStream[length];
   }
 
-  private static final class TrackGroupInfo {
+  private static final class TrackGroupInfo  implements DashDownloadFilter {
 
     @Documented
     @Retention(RetentionPolicy.SOURCE)
@@ -941,6 +951,14 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
           embeddedClosedCaptionTrackGroupIndex,
           /* eventStreamGroupIndex= */ -1);
     }
+
+    // PEACOCK WORK AROUND FOR https://github.com/google/ExoPlayer/issues/9284
+    // REMOVE WHEN THIS ISSUE IS RESOLVED
+    @Override
+    public boolean isPrimaryTrack() {
+      return trackGroupCategory == CATEGORY_PRIMARY;
+    }
+
 
     public static TrackGroupInfo embeddedEmsgTrack(
         int[] adaptationSetIndices, int primaryTrackGroupIndex) {
