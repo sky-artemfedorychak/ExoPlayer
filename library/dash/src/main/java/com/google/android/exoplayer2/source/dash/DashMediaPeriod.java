@@ -27,8 +27,6 @@ import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.SeekParameters;
 import com.google.android.exoplayer2.drm.DrmSessionEventListener;
 import com.google.android.exoplayer2.drm.DrmSessionManager;
-import com.google.android.exoplayer2.offline.DashDownloadFilter;
-import com.google.android.exoplayer2.offline.DashDownloadMediaPeriod;
 import com.google.android.exoplayer2.offline.StreamKey;
 import com.google.android.exoplayer2.source.CompositeSequenceableLoaderFactory;
 import com.google.android.exoplayer2.source.EmptySampleStream;
@@ -73,8 +71,7 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
 /* package */ final class DashMediaPeriod
     implements MediaPeriod,
         SequenceableLoader.Callback<ChunkSampleStream<DashChunkSource>>,
-        ChunkSampleStream.ReleaseCallback<DashChunkSource>,
-        DashDownloadMediaPeriod {
+        ChunkSampleStream.ReleaseCallback<DashChunkSource> {
 
   // Defined by ANSI/SCTE 214-1 2016 7.2.3.
   private static final Pattern CEA608_SERVICE_DESCRIPTOR_REGEX = Pattern.compile("CC([1-4])=(.+)");
@@ -149,12 +146,25 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
     trackGroupInfos = result.second;
   }
 
-  // PEACOCK WORK AROUND FOR https://github.com/google/ExoPlayer/issues/9284
-  // REMOVE WHEN THIS ISSUE IS RESOLVED
+  // PEACOCK CHANGE START
   @Override
-  public Object[] getTrackInfoArray() {
-    return trackGroupInfos;
+  public TrackGroupArray getDownloadableTrackGroups() {
+    List<TrackGroup> filtered = new ArrayList<>();
+
+    for (int j = 0; j < trackGroupInfos.length; j++) {
+      TrackGroupInfo trackInfo = trackGroupInfos[j];
+      if (trackInfo.trackGroupCategory == TrackGroupInfo.CATEGORY_PRIMARY) {
+        filtered.add(trackGroups.get(j));
+      }
+    }
+
+    TrackGroup[] filteredTrackGroupArray = new TrackGroup[filtered.size()];
+    for (int j = 0; j < filtered.size(); j++) {
+      filteredTrackGroupArray[j] = filtered.get(j);
+    }
+    return new TrackGroupArray(filteredTrackGroupArray);
   }
+  // PEACOCK CHANGE END
 
   /**
    * Updates the {@link DashManifest} and the index of this period in the manifest.
@@ -902,7 +912,7 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
     return new ChunkSampleStream[length];
   }
 
-  private static final class TrackGroupInfo  implements DashDownloadFilter {
+  private static final class TrackGroupInfo {
 
     @Documented
     @Retention(RetentionPolicy.SOURCE)
@@ -951,14 +961,6 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
           embeddedClosedCaptionTrackGroupIndex,
           /* eventStreamGroupIndex= */ -1);
     }
-
-    // PEACOCK WORK AROUND FOR https://github.com/google/ExoPlayer/issues/9284
-    // REMOVE WHEN THIS ISSUE IS RESOLVED
-    @Override
-    public boolean isPrimaryTrack() {
-      return trackGroupCategory == CATEGORY_PRIMARY;
-    }
-
 
     public static TrackGroupInfo embeddedEmsgTrack(
         int[] adaptationSetIndices, int primaryTrackGroupIndex) {
