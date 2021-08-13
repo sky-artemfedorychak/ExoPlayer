@@ -765,39 +765,6 @@ public final class DownloadHelper {
     return requestBuilder.setStreamKeys(streamKeys).build();
   }
 
-  // ORIGINAL METHOD
-//  // Initialization of array of Lists.
-//  @SuppressWarnings("unchecked")
-//  private void onMediaPrepared() {
-//    checkNotNull(mediaPreparer);
-//    checkNotNull(mediaPreparer.mediaPeriods);
-//    checkNotNull(mediaPreparer.timeline);
-//    int periodCount = mediaPreparer.mediaPeriods.length;
-//    int rendererCount = rendererCapabilities.length;
-//    trackSelectionsByPeriodAndRenderer =
-//        (List<ExoTrackSelection>[][]) new List<?>[periodCount][rendererCount];
-//    immutableTrackSelectionsByPeriodAndRenderer =
-//        (List<ExoTrackSelection>[][]) new List<?>[periodCount][rendererCount];
-//    for (int i = 0; i < periodCount; i++) {
-//      for (int j = 0; j < rendererCount; j++) {
-//        trackSelectionsByPeriodAndRenderer[i][j] = new ArrayList<>();
-//        immutableTrackSelectionsByPeriodAndRenderer[i][j] =
-//            Collections.unmodifiableList(trackSelectionsByPeriodAndRenderer[i][j]);
-//      }
-//    }
-//    trackGroupArrays = new TrackGroupArray[periodCount];
-//    mappedTrackInfos = new MappedTrackInfo[periodCount];
-//    for (int i = 0; i < periodCount; i++) {
-//      trackGroupArrays[i] = mediaPreparer.mediaPeriods[i].getTrackGroups();
-//      TrackSelectorResult trackSelectorResult = runTrackSelection(/* periodIndex= */ i);
-//      trackSelector.onSelectionActivated(trackSelectorResult.info);
-//      mappedTrackInfos[i] = checkNotNull(trackSelector.getCurrentMappedTrackInfo());
-//    }
-//    setPreparedWithMedia();
-//    checkNotNull(callbackHandler).post(() -> checkNotNull(callback).onPrepared(this));
-//  }
-
-  // PEACOCK ALTERED METHOD
   // Initialization of array of Lists.
   @SuppressWarnings("unchecked")
   private void onMediaPrepared() {
