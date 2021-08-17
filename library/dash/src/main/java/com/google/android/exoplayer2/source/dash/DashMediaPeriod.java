@@ -146,6 +146,26 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
     trackGroupInfos = result.second;
   }
 
+  // PEACOCK CHANGE START
+  @Override
+  public TrackGroupArray getDownloadableTrackGroups() {
+    List<TrackGroup> filtered = new ArrayList<>();
+
+    for (int j = 0; j < trackGroupInfos.length; j++) {
+      TrackGroupInfo trackInfo = trackGroupInfos[j];
+      if (trackInfo.trackGroupCategory == TrackGroupInfo.CATEGORY_PRIMARY) {
+        filtered.add(trackGroups.get(j));
+      }
+    }
+
+    TrackGroup[] filteredTrackGroupArray = new TrackGroup[filtered.size()];
+    for (int j = 0; j < filtered.size(); j++) {
+      filteredTrackGroupArray[j] = filtered.get(j);
+    }
+    return new TrackGroupArray(filteredTrackGroupArray);
+  }
+  // PEACOCK CHANGE END
+
   /**
    * Updates the {@link DashManifest} and the index of this period in the manifest.
    *

@@ -787,7 +787,7 @@ public final class DownloadHelper {
     trackGroupArrays = new TrackGroupArray[periodCount];
     mappedTrackInfos = new MappedTrackInfo[periodCount];
     for (int i = 0; i < periodCount; i++) {
-      trackGroupArrays[i] = mediaPreparer.mediaPeriods[i].getTrackGroups();
+      trackGroupArrays[i] = mediaPreparer.mediaPeriods[i].getDownloadableTrackGroups();
       TrackSelectorResult trackSelectorResult = runTrackSelection(/* periodIndex= */ i);
       trackSelector.onSelectionActivated(trackSelectorResult.info);
       mappedTrackInfos[i] = checkNotNull(trackSelector.getCurrentMappedTrackInfo());
