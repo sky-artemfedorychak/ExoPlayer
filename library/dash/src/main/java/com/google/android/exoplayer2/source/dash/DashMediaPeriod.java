@@ -52,6 +52,7 @@ import com.google.android.exoplayer2.upstream.Allocator;
 import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy;
 import com.google.android.exoplayer2.upstream.LoaderErrorThrower;
 import com.google.android.exoplayer2.upstream.TransferListener;
+import com.google.android.exoplayer2.util.Log; // TODO CVT-8016 remove
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.Util;
 import com.google.common.primitives.Ints;
@@ -149,6 +150,8 @@ import org.checkerframework.checker.nullness.compatqual.NullableType;
   // PEACOCK CHANGE START
   @Override
   public TrackGroupArray getDownloadableTrackGroups() {
+  // TODO CVT-8016 remove
+    Log.d("dl-issue", "getDownloadableTrackGroups");
     List<TrackGroup> filtered = new ArrayList<>();
 
     for (int j = 0; j < trackGroupInfos.length; j++) {

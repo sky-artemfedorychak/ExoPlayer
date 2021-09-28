@@ -39,6 +39,7 @@ import com.google.android.exoplayer2.source.MediaSource.MediaPeriodId;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.util.Assertions;
+import com.google.android.exoplayer2.util.Log; // TODO CVT-8016 remove
 import com.google.android.exoplayer2.util.Util;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
@@ -1725,6 +1726,8 @@ public class DefaultTrackSelector extends MappingTrackSelector {
       TrackGroupArray rendererTrackGroups = mappedTrackInfo.getTrackGroups(i);
       if (params.hasSelectionOverride(i, rendererTrackGroups)) {
         SelectionOverride override = params.getSelectionOverride(i, rendererTrackGroups);
+        // TODO CVT-8016 remove
+        //Log.d("dl-issue", this.getClass().getSimpleName() + override."format at track index: $format");
         definitions[i] =
             override == null
                 ? null
