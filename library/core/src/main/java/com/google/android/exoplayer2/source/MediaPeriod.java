@@ -88,20 +88,6 @@ public interface MediaPeriod extends SequenceableLoader {
    */
   TrackGroupArray getTrackGroups();
 
-  // PEACOCK CHANGE START
-  /**
-   * Returns the {@link TrackGroup}s exposed by the period that are downloadable. Implementations
-   * can use this to filter out embedded {@link TrackGroup}s.
-   *
-   * <p>This method is only called after the period has been prepared.
-   *
-   * @return The {@link TrackGroup}s.
-   */
-  default TrackGroupArray getDownloadableTrackGroups() {
-    return getTrackGroups();
-  }
-  // PEACOCK CHANGE END
-
   /**
    * Returns a list of {@link StreamKey StreamKeys} which allow to filter the media in this period
    * to load only the parts needed to play the provided {@link ExoTrackSelection TrackSelections}.

@@ -1726,8 +1726,6 @@ public class DefaultTrackSelector extends MappingTrackSelector {
       TrackGroupArray rendererTrackGroups = mappedTrackInfo.getTrackGroups(i);
       if (params.hasSelectionOverride(i, rendererTrackGroups)) {
         SelectionOverride override = params.getSelectionOverride(i, rendererTrackGroups);
-        // TODO CVT-8016 remove
-        //Log.d("dl-issue", this.getClass().getSimpleName() + override."format at track index: $format");
         definitions[i] =
             override == null
                 ? null
