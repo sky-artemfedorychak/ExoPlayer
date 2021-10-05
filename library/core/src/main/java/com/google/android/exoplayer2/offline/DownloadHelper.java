@@ -765,7 +765,7 @@ public final class DownloadHelper {
     return requestBuilder.setStreamKeys(streamKeys).build();
   }
 
-    // Initialization of array of Lists.
+  // Initialization of array of Lists.
   @SuppressWarnings("unchecked")
   private void onMediaPrepared() {
     checkNotNull(mediaPreparer);
