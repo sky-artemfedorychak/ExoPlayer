@@ -204,6 +204,10 @@ import java.util.List;
             playbackInfoUpdateListener);
   }
 
+  public void setHelioAdStallResiliencyEnabled(boolean helioAdStallResiliencyEnabled) {
+    internalPlayer.setHelioAdStallResiliencyEnabled(helioAdStallResiliencyEnabled);
+  }
+
   /**
    * Set a limit on the time a call to {@link #setForegroundMode} can spend. If a call to {@link
    * #setForegroundMode} takes more than {@code timeoutMs} milliseconds to complete, the player will

@@ -707,6 +707,10 @@ public class SimpleExoPlayer extends BasePlayer
         C.TRACK_TYPE_AUDIO, Renderer.MSG_SET_SKIP_SILENCE_ENABLED, skipSilenceEnabled);
   }
 
+  public void setHelioAdStallResiliencyEnabled(boolean helioAdStallResiliencyEnabled) {
+    player.setHelioAdStallResiliencyEnabled(helioAdStallResiliencyEnabled);
+  }
+
   @Override
   public void experimentalSetOffloadSchedulingEnabled(boolean offloadSchedulingEnabled) {
     verifyApplicationThread();
