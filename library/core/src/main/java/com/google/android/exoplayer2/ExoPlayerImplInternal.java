@@ -208,7 +208,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
   private long setForegroundModeTimeoutMs;
 
   /** Allows for the disabling of handling video player stalls during an ad break. */
-  private boolean helioAdStallResiliencyEnabled;
+  private boolean helioAdStallResiliencyEnabled = true;
 
   public ExoPlayerImplInternal(
       Renderer[] renderers,
