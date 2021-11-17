@@ -140,7 +140,11 @@ public final class MaskingMediaPeriod implements MediaPeriod, MediaPeriod.Callba
 
   @Override
   public void maybeNotifyOrThrowMediaStreamError(IOException e) throws IOException {
-    mediaPeriod.maybeNotifyOrThrowMediaStreamError(e);
+    if (mediaPeriod != null) {
+      mediaPeriod.maybeNotifyOrThrowMediaStreamError(e);
+    } else {
+      throw e;
+    }
   }
 
   @Override
