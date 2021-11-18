@@ -53,6 +53,12 @@ public interface MediaPeriod extends SequenceableLoader {
     void onPrepared(MediaPeriod mediaPeriod);
   }
 
+  /** Allows {@link MediaPeriod} to handle or throw an IOException thrown by a
+   * {@link com.google.android.exoplayer2.Renderer}.*/
+  default void maybeNotifyOrThrowMediaStreamError(IOException e) throws IOException {
+    throw e;
+  }
+
   /**
    * Prepares this media period asynchronously.
    *
