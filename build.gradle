@@ -26,6 +26,8 @@ plugins {
     id "com.jfrog.artifactory" version "4.21.0"
 }
 
+apply from: "$rootDir/gradleScripts/buildScript.gradle"
+
 allprojects {
     repositories {
         google()

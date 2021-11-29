@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-export FASTLANE_HIDE_TIMESTAMP=true
-eval "$(rbenv init -)"
-set -e
-rbenv install -s
-gem install bundler
-bundle config set deployment 'true'
-bundle install
-
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 project_dir="${script_dir}/.."
 
@@ -18,6 +10,29 @@ export JAVA_HOME=$project_dir/.build/jdk-${JDK_VERSION}.jdk
 export PATH=$JAVA_HOME/bin:$PATH:/usr/local/bin
 echo "JAVA_HOME => $JAVA_HOME"
 echo "PATH => $PATH"
+
+function exportGradleProperties() {
+  propsFile=""
+  if [ -f /home/jenkins/.gradle/gradle.properties ]; then
+    propsFile="/home/jenkins/.gradle/gradle.properties"
+  elif [ -f $project_dir/local.properties ]; then
+    propsFile="$project_dir/local.properties"
+  else
+    propsFile="$project_dir/gradle.properties"
+  fi
+
+  echo "Exporting properties from $propsFile"
+  while read line;do
+  if ! [ -z "$line" ] && ! [[ "$line" =~ ^#.*  ]]; then
+      eval $line > /dev/null 2>&1  || true
+  fi
+  done < <(awk -F= '/=/{gsub(/\./, "_", $1); $1=toupper($1); gsub(/\[/, "{"); gsub(/\]/, "}"); gsub(/\r/, "")} 1' OFS== $propsFile)
+
+  artifactory_url="$NEW_ARTIFACTORY_PROTOCOL://$NEW_ARTIFACTORY_HOST"
+  artifactory_path=$NEW_ARTIFACTORY_CVSDK_PATH
+  artifactory_username=$NEW_ARTIFACTORY_WRITE_USERNAME
+  artifactory_password=$NEW_ARTIFACTORY_WRITE_PASSWORD
+}
 
 
 function copyJunitReports() {
@@ -86,18 +101,25 @@ fi
 
 cd $project_dir
 
-bundle install  --deployment
+exportGradleProperties
 
 if isSkyBranch || isSnapshotCommit; then
   echo "Yes"
   echo ">>>> DEPLOYING SNAPSHOT <<<<"
   $script_dir/build_ffmpeg.sh
-  bundle exec fastlane android stage
+
+  ./gradlew validateVariables
+  ./gradlew clean lintRelease testRelease assembleRelease
+  # no-configure-on-demand flag is required due to an issue with jfrog artifactory plugin
+  # but it's not a long term solution, as per https://github.com/gradle/gradle/issues/4783#issuecomment-393184042
+  ./gradlew -Partifactory_url=$artifactory_url \
+            -Partifactory_path=$artifactory_path \
+            -Partifactory_username=$artifactory_username \
+            -Partifactory_password=$artifactory_password \
+            -Dorg.gradle.parallel=false --no-configure-on-demand \
+            sourcesJar javadocJar generatePomFileForAarReleasePublication artifactoryPublish
 else
   echo "No"
-  bundle exec fastlane android test
+  ./gradlew validateVariables
+  ./gradlew clean lintRelease testRelease
 fi
-
-copyJunitReports
-
-exit ${exitCode}

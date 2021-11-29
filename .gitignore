@@ -55,7 +55,6 @@ fastlane/report.xml
 .DS_Store
 cmake-build-debug
 dist
-jacoco.exec
 tmp
 .cxx
 
