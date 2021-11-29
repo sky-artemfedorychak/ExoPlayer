@@ -14,18 +14,22 @@
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.0.1'
-        classpath 'com.google.android.gms:strict-version-matcher-plugin:1.2.1'
-        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4.9.8"
+        classpath 'com.android.tools.build:gradle:4.2.2'
+        classpath 'com.google.android.gms:strict-version-matcher-plugin:1.2.2'
     }
 }
+
+plugins {
+    id "com.jfrog.artifactory" version "4.21.0"
+}
+
 allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     if (it.hasProperty('externalBuildDir')) {
         if (!new File(externalBuildDir).isAbsolute()) {
