@@ -7,7 +7,7 @@ defaultNodes:
 
 modules:
   exoplayer:
-    pipelineShape: build-release
+    pipelineShape: simple
     directory: /
     nodes:
-      default: core-video-sdk-android-slave
+      default: core-video-sdk-android-java11
