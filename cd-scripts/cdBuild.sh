@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 
+source ~/.bash_profile
+jenv enable-plugin export
+jenv versions
+jenv shell 11
+
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 project_dir="${script_dir}/.."
-
-# Configure JDK
-JDK_VERSION=11.0.2
-$script_dir/get_jdk.sh $JDK_VERSION
-export JAVA_HOME=$project_dir/.build/jdk-${JDK_VERSION}.jdk
-export PATH=$JAVA_HOME/bin:$PATH:/usr/local/bin
-echo "JAVA_HOME => $JAVA_HOME"
-echo "PATH => $PATH"
 
 function exportGradleProperties() {
   propsFile=""
