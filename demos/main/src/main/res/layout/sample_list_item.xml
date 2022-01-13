@@ -21,6 +21,13 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
+  <View
+    android:layout_width="10dp"
+    android:layout_marginEnd="10dp"
+    android:layout_height="match_parent"
+    android:background="@color/list_item_background_color_selector"/>
+
+
   <TextView android:id="@+id/sample_title"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
