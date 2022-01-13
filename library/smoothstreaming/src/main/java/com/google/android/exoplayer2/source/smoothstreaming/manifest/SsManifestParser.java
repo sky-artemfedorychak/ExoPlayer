@@ -683,8 +683,16 @@ public class SsManifestParser implements ParsingLoadable.Parser<SsManifest> {
         }
         int channelCount = parseRequiredInt(parser, KEY_CHANNELS);
         int sampleRate = parseRequiredInt(parser, KEY_SAMPLING_RATE);
-        List<byte[]> codecSpecificData = buildCodecSpecificData(
-            parser.getAttributeValue(null, KEY_CODEC_PRIVATE_DATA));
+        List<byte[]> codecSpecificData;
+        if (MimeTypes.AUDIO_E_AC3.equals(sampleMimeType)) {
+          /* Although 's CodecPrivateDataCodec is a required property of the QualityLevel element,
+             this has to be empty for eac-3 tracks
+             See + info : https://github.com/sky-uk/core-video-team/issues/8627 */
+          codecSpecificData = Collections.emptyList();
+        } else {
+          codecSpecificData = buildCodecSpecificData(
+              parser.getAttributeValue(null, KEY_CODEC_PRIVATE_DATA));
+        }
         if (codecSpecificData.isEmpty() && MimeTypes.AUDIO_AAC.equals(sampleMimeType)) {
           codecSpecificData =
               Collections.singletonList(
