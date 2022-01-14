@@ -20,7 +20,7 @@
     android:paddingEnd="12dp"
     android:gravity="center_vertical"
     android:orientation="horizontal">
-  
+
   <TextView android:id="@+id/sample_title"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
