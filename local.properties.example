@@ -23,4 +23,7 @@ new_artifactory_path_snapshot=sky-go-snapshot-maven
 new_artifactory_cvsdk_path=core-video-sdk-android-maven
 new_artifactory_kmp_path=core-video-sdk-multiplatform-maven
 
+oneapp_maven_username=NBCSportsDev
+oneapp_maven_password=
+
 github_token=
