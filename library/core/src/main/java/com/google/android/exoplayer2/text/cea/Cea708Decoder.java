@@ -234,15 +234,28 @@ public final class Cea708Decoder extends CeaDecoder {
         finalizeCurrentPacket();
 
         int sequenceNumber = (ccData1 & 0xC0) >> 6; // first 2 bits
-        if (previousSequenceNumber != C.INDEX_UNSET
-            && sequenceNumber != (previousSequenceNumber + 1) % 4) {
-          resetCueBuilders();
-          Log.w(
-              TAG,
-              "Sequence number discontinuity. previous="
-                  + previousSequenceNumber
-                  + " current="
-                  + sequenceNumber);
+        if (previousSequenceNumber != C.INDEX_UNSET) {
+          // Same frame. Ignore and wait for more data.
+          if (sequenceNumber == previousSequenceNumber) {
+            Log.w(
+                TAG,
+                "Received same sequence. Ignore. previous="
+                    + previousSequenceNumber
+                    + " current="
+                    + sequenceNumber);
+            return;
+          }
+
+          // A sequence discontinuity. Reset and continue.
+          if (sequenceNumber != (previousSequenceNumber + 1) % 4) {
+            resetCueBuilders();
+            Log.w(
+                TAG,
+                "Sequence number discontinuity. previous="
+                    + previousSequenceNumber
+                    + " current="
+                    + sequenceNumber);
+          }
         }
         previousSequenceNumber = sequenceNumber;
 
