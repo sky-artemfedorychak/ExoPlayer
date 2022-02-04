@@ -234,15 +234,28 @@ public final class Cea708Decoder extends CeaDecoder {
         finalizeCurrentPacket();
 
         int sequenceNumber = (ccData1 & 0xC0) >> 6; // first 2 bits
-        if (previousSequenceNumber != C.INDEX_UNSET
-            && sequenceNumber != (previousSequenceNumber + 1) % 4) {
-          resetCueBuilders();
-          Log.w(
-              TAG,
-              "Sequence number discontinuity. previous="
-                  + previousSequenceNumber
-                  + " current="
-                  + sequenceNumber);
+        if (previousSequenceNumber != C.INDEX_UNSET) {
+          // Same frame. Ignore and wait for more data.
+          if (sequenceNumber == previousSequenceNumber) {
+            Log.w(
+                TAG,
+                "Received same sequence. Ignore. previous="
+                    + previousSequenceNumber
+                    + " current="
+                    + sequenceNumber);
+            return;
+          }
+
+          // A sequence discontinuity. Reset and continue.
+          if (sequenceNumber != (previousSequenceNumber + 1) % 4) {
+            resetCueBuilders();
+            Log.w(
+                TAG,
+                "Sequence number discontinuity. previous="
+                    + previousSequenceNumber
+                    + " current="
+                    + sequenceNumber);
+          }
         }
         previousSequenceNumber = sequenceNumber;
 
@@ -329,7 +342,10 @@ public final class Cea708Decoder extends CeaDecoder {
     // 8.10.4 for more details.
     boolean cuesNeedUpdate = false;
 
-    while (serviceBlockPacket.bitsLeft() > 0) {
+    // Check we are protocol and buffer boundaries (buffer boundaries should never exceed
+    // protocol defined boundaries, but check to avoid crashes in case block is bad encoded)
+    int endBlockPosition = serviceBlockPacket.getPosition() + (blockSize * 8);
+    while (serviceBlockPacket.bitsLeft() > 0 && serviceBlockPacket.getPosition() < endBlockPosition) {
       int command = serviceBlockPacket.readBits(8);
       if (command != COMMAND_EXT1) {
         if (command <= GROUP_C0_END) {
