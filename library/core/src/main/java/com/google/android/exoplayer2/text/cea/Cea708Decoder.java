@@ -312,72 +312,87 @@ public final class Cea708Decoder extends CeaDecoder {
       // we have received.
     }
 
-    serviceBlockPacket.reset(currentDtvCcPacket.packetData, currentDtvCcPacket.currentIndex);
-
-    int serviceNumber = serviceBlockPacket.readBits(3);
-    int blockSize = serviceBlockPacket.readBits(5);
-    if (serviceNumber == 7) {
-      // extended service numbers
-      serviceBlockPacket.skipBits(2);
-      serviceNumber = serviceBlockPacket.readBits(6);
-      if (serviceNumber < 7) {
-        Log.w(TAG, "Invalid extended service number: " + serviceNumber);
-      }
-    }
-
-    // Ignore packets in which blockSize is 0
-    if (blockSize == 0) {
-      if (serviceNumber != 0) {
-        Log.w(TAG, "serviceNumber is non-zero (" + serviceNumber + ") when blockSize is 0");
-      }
-      return;
-    }
-
-    if (serviceNumber != selectedServiceNumber) {
-      return;
-    }
-
     // The cues should be updated if we receive a C0 ETX command, any C1 command, or if after
     // processing the service block any text has been added to the buffer. See CEA-708-B Section
     // 8.10.4 for more details.
     boolean cuesNeedUpdate = false;
 
-    // Check we are protocol and buffer boundaries (buffer boundaries should never exceed
-    // protocol defined boundaries, but check to avoid crashes in case block is bad encoded)
-    int endBlockPosition = serviceBlockPacket.getPosition() + (blockSize * 8);
-    while (serviceBlockPacket.bitsLeft() > 0 && serviceBlockPacket.getPosition() < endBlockPosition) {
-      int command = serviceBlockPacket.readBits(8);
-      if (command != COMMAND_EXT1) {
-        if (command <= GROUP_C0_END) {
-          handleC0Command(command);
-          // If the C0 command was an ETX command, the cues are updated in handleC0Command.
-        } else if (command <= GROUP_G0_END) {
-          handleG0Character(command);
-          cuesNeedUpdate = true;
-        } else if (command <= GROUP_C1_END) {
-          handleC1Command(command);
-          cuesNeedUpdate = true;
-        } else if (command <= GROUP_G1_END) {
-          handleG1Character(command);
-          cuesNeedUpdate = true;
-        } else {
-          Log.w(TAG, "Invalid base command: " + command);
+    // Streams with multiple embedded cc tracks (different language tracks) can be delivered
+    // in the same frame packet, so current serviceBlockPacket buffer can contain information
+    // for different service numbers
+    // xe: consider the following service block 298CFC9818E332731F104220620000. This service
+    // block must be split into 3 different blocks
+    //   298CFC9818E332731F10: Information for service number 1
+    //   422062: Information for service number 2
+    //   0000: Null data
+    //
+    // So here we iterate for the full buffer until we found null data or buffer is emptied,
+    // and on each iteration process only the block related to that service number. if we are
+    // not targetting an specific service number, then just skip it and continue with next
+    // block.
+    serviceBlockPacket.reset(currentDtvCcPacket.packetData, currentDtvCcPacket.currentIndex);
+    while (serviceBlockPacket.bitsLeft() > 0) {
+      int serviceNumber = serviceBlockPacket.readBits(3);
+      int blockSize = serviceBlockPacket.readBits(5);
+      if (serviceNumber == 7) {
+        // extended service numbers
+        serviceBlockPacket.skipBits(2);
+        serviceNumber = serviceBlockPacket.readBits(6);
+        if (serviceNumber < 7) {
+          Log.w(TAG, "Invalid extended service number: " + serviceNumber);
         }
-      } else {
-        // Read the extended command
-        command = serviceBlockPacket.readBits(8);
-        if (command <= GROUP_C2_END) {
-          handleC2Command(command);
-        } else if (command <= GROUP_G2_END) {
-          handleG2Character(command);
-          cuesNeedUpdate = true;
-        } else if (command <= GROUP_C3_END) {
-          handleC3Command(command);
-        } else if (command <= GROUP_G3_END) {
-          handleG3Character(command);
-          cuesNeedUpdate = true;
+      }
+
+      // Ignore packets in which blockSize is 0
+      if (blockSize == 0) {
+        if (serviceNumber != 0) {
+          Log.w(TAG, "serviceNumber is non-zero (" + serviceNumber + ") when blockSize is 0");
+        }
+        break;
+      }
+
+      if (serviceNumber != selectedServiceNumber) {
+        serviceBlockPacket.skipBytes(blockSize);
+        continue;
+      }
+
+      // Iterate only for the current service block packet (the current service number we
+      // are looking for)
+      int endBlockPosition = serviceBlockPacket.getPosition() + (blockSize * 8);
+      while (serviceBlockPacket.getPosition() < endBlockPosition) {
+        int command = serviceBlockPacket.readBits(8);
+        if (command != COMMAND_EXT1) {
+          if (command <= GROUP_C0_END) {
+            handleC0Command(command);
+            // If the C0 command was an ETX command, the cues are updated in handleC0Command.
+          } else if (command <= GROUP_G0_END) {
+            handleG0Character(command);
+            cuesNeedUpdate = true;
+          } else if (command <= GROUP_C1_END) {
+            handleC1Command(command);
+            cuesNeedUpdate = true;
+          } else if (command <= GROUP_G1_END) {
+            handleG1Character(command);
+            cuesNeedUpdate = true;
+          } else {
+            Log.w(TAG, "Invalid base command: " + command);
+          }
         } else {
-          Log.w(TAG, "Invalid extended command: " + command);
+          // Read the extended command
+          command = serviceBlockPacket.readBits(8);
+          if (command <= GROUP_C2_END) {
+            handleC2Command(command);
+          } else if (command <= GROUP_G2_END) {
+            handleG2Character(command);
+            cuesNeedUpdate = true;
+          } else if (command <= GROUP_C3_END) {
+            handleC3Command(command);
+          } else if (command <= GROUP_G3_END) {
+            handleG3Character(command);
+            cuesNeedUpdate = true;
+          } else {
+            Log.w(TAG, "Invalid extended command: " + command);
+          }
         }
       }
     }
