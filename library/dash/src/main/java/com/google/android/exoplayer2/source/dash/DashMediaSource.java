@@ -938,6 +938,9 @@ public final class DashMediaSource extends BaseMediaSource {
         // of the window.
         windowDefaultPositionUs = minimumWindowDefaultPositionUs;
       }
+    } else if (manifest.availabilityStartTimeMs != C.TIME_UNSET) {
+      windowStartUnixTimeMs =
+              manifest.availabilityStartTimeMs + C.usToMs(windowStartTimeInManifestUs);
     }
     long offsetInFirstPeriodUs = windowStartTimeInManifestUs - C.msToUs(firstPeriod.startMs);
     DashTimeline timeline =
