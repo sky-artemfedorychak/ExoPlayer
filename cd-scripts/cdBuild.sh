@@ -29,8 +29,10 @@ function exportGradleProperties() {
   artifactory_path=$NEW_ARTIFACTORY_CVSDK_PATH
   artifactory_username=$NEW_ARTIFACTORY_WRITE_USERNAME
   artifactory_password=$NEW_ARTIFACTORY_WRITE_PASSWORD
-}
 
+  oneapp_maven_username=$ONEAPP_MAVEN_USERNAME
+  oneapp_maven_username=$ONEAPP_MAVEN_PASSWORD
+}
 
 function copyJunitReports() {
   dest=$(cd ${project_dir}; pwd)/build/junit-reports
@@ -95,7 +97,6 @@ else
   echo "No"
 fi
 
-
 cd $project_dir
 
 exportGradleProperties
@@ -113,8 +114,14 @@ if isSkyBranch || isSnapshotCommit; then
             -Partifactory_path=$artifactory_path \
             -Partifactory_username=$artifactory_username \
             -Partifactory_password=$artifactory_password \
+            -Poneapp_maven_username=$oneapp_maven_username \
+            -Poneapp_maven_password=$oneapp_maven_password \
             -Dorg.gradle.parallel=false --no-configure-on-demand \
-            sourcesJar javadocJar generatePomFileForAarReleasePublication artifactoryPublish
+            sourcesJar \
+            javadocJar \
+            generatePomFileForAarReleasePublication \
+            artifactoryPublish \
+            publishReleasePublicationToOneAppMavenRepository
 else
   echo "No"
   ./gradlew validateVariables

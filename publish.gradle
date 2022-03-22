@@ -19,6 +19,16 @@ afterEvaluate {
             maven {
                 url = findProperty('mavenRepo') ?: "${buildDir}/repo"
             }
+            if (project.hasProperty('oneapp_maven_username')) {
+                maven {
+                    url "https://pkgs.dev.azure.com/NBCSportsDev/_packaging/cvsdk-maven/maven/v1"
+                    name 'oneAppMaven'
+                    credentials {
+                        username oneapp_maven_username
+                        password oneapp_maven_password
+                    }
+                }
+            }
         }
         publications {
             release(MavenPublication) {
@@ -26,7 +36,7 @@ afterEvaluate {
                 artifact androidSourcesJar
                 groupId = 'com.google.android.exoplayer'
                 artifactId = releaseArtifact
-                version releaseVersion
+                version getVersionString()
                 pom {
                     name = releaseArtifact
                     description = releaseDescription
