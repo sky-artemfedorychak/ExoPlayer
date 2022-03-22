@@ -97,7 +97,6 @@ else
   echo "No"
 fi
 
-
 cd $project_dir
 
 exportGradleProperties
@@ -118,7 +117,11 @@ if isSkyBranch || isSnapshotCommit; then
             -Poneapp_maven_username=$oneapp_maven_username \
             -Poneapp_maven_password=$oneapp_maven_password \
             -Dorg.gradle.parallel=false --no-configure-on-demand \
-            sourcesJar javadocJar generatePomFileForAarReleasePublication artifactoryPublish
+            sourcesJar \
+            javadocJar \
+            generatePomFileForAarReleasePublication \
+            artifactoryPublish \
+            publishAllPublicationsToOneAppMavenRepository
 else
   echo "No"
   ./gradlew validateVariables
