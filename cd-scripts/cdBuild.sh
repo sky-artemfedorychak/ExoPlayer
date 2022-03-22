@@ -121,7 +121,7 @@ if isSkyBranch || isSnapshotCommit; then
             javadocJar \
             generatePomFileForAarReleasePublication \
             artifactoryPublish \
-            publishAllPublicationsToOneAppMavenRepository
+            publishReleasePublicationToOneAppMavenRepository
 else
   echo "No"
   ./gradlew validateVariables
