@@ -1,0 +1,33 @@
+gradle.rootProject() {
+    injectLocalProps()
+}
+def injectLocalProps() {
+    File localFile = rootProject.file("local.properties")
+
+    if (localFile.exists()) {
+        println "Reading credentials from local.properties"
+        def localProperties = new Properties()
+
+        localProperties.load(new FileInputStream(localFile))
+
+        localProperties.stringPropertyNames().forEach { propName ->
+            // if property already in project, it ignores value from local.properties
+            if (!project.hasProperty(propName)) {
+                project.ext[propName] = localProperties.getProperty(propName)
+            }
+        }
+
+        def message = "Environment variable %s has not been set or is empty"
+        assert project.getProperty("new_artifactory_cvsdk_path") : String.format(message, "new_artifactory_cvsdk_path")
+        assert project.getProperty("new_artifactory_write_username") : String.format(message, "new_artifactory_write_username")
+        assert project.getProperty("new_artifactory_write_password") : String.format(message, "new_artifactory_write_password")
+        assert project.getProperty("oneapp_maven_username") : String.format(message, "oneapp_maven_username")
+        assert project.getProperty("oneapp_maven_password") : String.format(message, "oneapp_maven_password")
+
+        println("9153 new_artifactory_cvsdk_path: ${project.getProperty("new_artifactory_cvsdk_path")}")
+        println("9153 new_artifactory_write_username: ${project.getProperty("new_artifactory_write_username")}")
+        println("9153 oneapp_maven_username: ${project.getProperty("oneapp_maven_username")}")
+
+        println("All Android environment variables set")
+    }
+}
