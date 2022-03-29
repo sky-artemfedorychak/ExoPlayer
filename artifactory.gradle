@@ -49,9 +49,6 @@ if (IMPORT_LOCAL_EXOPLAYER == "false") {
     artifactory {
         if (project.hasProperty('new_artifactory_protocol') && project.hasProperty('new_artifactory_host')) {
             def artifactory_url = "$new_artifactory_protocol://$new_artifactory_host"
-            println("9135: ARTI: artifactory_url: $artifactory_url")
-            println("9135: ARTI: new_artifactory_cvsdk_path: $new_artifactory_cvsdk_path")
-            println("9135: ARTI: artifactory_username: $new_artifactory_write_username")
             contextUrl = artifactory_url
 
             publish {
