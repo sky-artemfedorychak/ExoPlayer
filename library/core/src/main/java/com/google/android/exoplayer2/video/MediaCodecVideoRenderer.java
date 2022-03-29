@@ -27,7 +27,6 @@ import android.content.Context;
 import android.graphics.Point;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo.CodecCapabilities;
-import android.media.MediaCodecInfo.CodecProfileLevel;
 import android.media.MediaCrypto;
 import android.media.MediaFormat;
 import android.os.Bundle;
@@ -65,8 +64,9 @@ import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.TraceUtil;
 import com.google.android.exoplayer2.util.Util;
 import com.google.android.exoplayer2.video.VideoRendererEventListener.EventDispatcher;
+import com.google.common.collect.ImmutableList;
+
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -370,31 +370,24 @@ public class MediaCodecVideoRenderer extends MediaCodecRenderer {
       throws DecoderQueryException {
     @Nullable String mimeType = format.sampleMimeType;
     if (mimeType == null) {
-      return Collections.emptyList();
+      return ImmutableList.of();
     }
     List<MediaCodecInfo> decoderInfos =
         mediaCodecSelector.getDecoderInfos(
             mimeType, requiresSecureDecoder, requiresTunnelingDecoder);
+
     decoderInfos = MediaCodecUtil.getDecoderInfosSortedByFormatSupport(decoderInfos, format);
-    if (MimeTypes.VIDEO_DOLBY_VISION.equals(mimeType)) {
-      // Fall back to H.264/AVC or H.265/HEVC for the relevant DV profiles.
-      @Nullable
-      Pair<Integer, Integer> codecProfileAndLevel = MediaCodecUtil.getCodecProfileAndLevel(format);
-      if (codecProfileAndLevel != null) {
-        int profile = codecProfileAndLevel.first;
-        if (profile == CodecProfileLevel.DolbyVisionProfileDvheDtr
-            || profile == CodecProfileLevel.DolbyVisionProfileDvheSt) {
-          decoderInfos.addAll(
-              mediaCodecSelector.getDecoderInfos(
-                  MimeTypes.VIDEO_H265, requiresSecureDecoder, requiresTunnelingDecoder));
-        } else if (profile == CodecProfileLevel.DolbyVisionProfileDvavSe) {
-          decoderInfos.addAll(
-              mediaCodecSelector.getDecoderInfos(
-                  MimeTypes.VIDEO_H264, requiresSecureDecoder, requiresTunnelingDecoder));
-        }
-      }
+    @Nullable String alternativeMimeType = MediaCodecUtil.getAlternativeCodecMimeType(format);
+    if (alternativeMimeType == null) {
+      return ImmutableList.copyOf(decoderInfos);
     }
-    return Collections.unmodifiableList(decoderInfos);
+    List<MediaCodecInfo> alternativeDecoderInfos =
+        mediaCodecSelector.getDecoderInfos(
+            alternativeMimeType, requiresSecureDecoder, requiresTunnelingDecoder);
+    return ImmutableList.<MediaCodecInfo>builder()
+        .addAll(decoderInfos)
+        .addAll(alternativeDecoderInfos)
+        .build();
   }
 
   @Override
