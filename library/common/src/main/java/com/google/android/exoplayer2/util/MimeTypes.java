@@ -117,6 +117,15 @@ public final class MimeTypes {
 
   public static final String IMAGE_JPEG = BASE_TYPE_IMAGE + "/jpeg";
 
+  /**
+   * A non-standard codec string for E-AC3-JOC. Use of this constant allows for disambiguation
+   * between regular E-AC3 ("ec-3") and E-AC3-JOC ("ec+3") streams from the codec string alone. The
+   * standard is to use "ec-3" for both, as per the <a href="https://mp4ra.org/#/codecs">MP4RA
+   * registered codec types</a>.
+   */
+  public static final String CODEC_E_AC3_JOC = "ec+3";
+
+
   private static final ArrayList<CustomMimeType> customMimeTypes = new ArrayList<>();
 
   private static final Pattern MP4A_RFC_6381_CODEC_PATTERN =
