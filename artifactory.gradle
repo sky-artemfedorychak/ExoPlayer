@@ -47,14 +47,15 @@ if (IMPORT_LOCAL_EXOPLAYER == "false") {
     }
 
     artifactory {
-        if (project.hasProperty('artifactory_url')) {
+        if (project.hasProperty('new_artifactory_protocol') && project.hasProperty('new_artifactory_host')) {
+            def artifactory_url = "$new_artifactory_protocol://$new_artifactory_host"
             contextUrl = artifactory_url
 
             publish {
                 repository {
-                    repoKey = artifactory_path
-                    username = artifactory_username
-                    password = artifactory_password
+                    repoKey = new_artifactory_cvsdk_path
+                    username = new_artifactory_write_username
+                    password = new_artifactory_write_password
                 }
                 defaults {
                     publications('aarRelease')

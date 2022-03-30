@@ -8,32 +8,6 @@ jenv shell 11
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 project_dir="${script_dir}/.."
 
-function exportGradleProperties() {
-  propsFile=""
-  if [ -f /home/jenkins/.gradle/gradle.properties ]; then
-    propsFile="/home/jenkins/.gradle/gradle.properties"
-  elif [ -f $project_dir/local.properties ]; then
-    propsFile="$project_dir/local.properties"
-  else
-    propsFile="$project_dir/gradle.properties"
-  fi
-
-  echo "Exporting properties from $propsFile"
-  while read line;do
-  if ! [ -z "$line" ] && ! [[ "$line" =~ ^#.*  ]]; then
-      eval $line > /dev/null 2>&1  || true
-  fi
-  done < <(awk -F= '/=/{gsub(/\./, "_", $1); $1=toupper($1); gsub(/\[/, "{"); gsub(/\]/, "}"); gsub(/\r/, "")} 1' OFS== $propsFile)
-
-  artifactory_url="$NEW_ARTIFACTORY_PROTOCOL://$NEW_ARTIFACTORY_HOST"
-  artifactory_path=$NEW_ARTIFACTORY_CVSDK_PATH
-  artifactory_username=$NEW_ARTIFACTORY_WRITE_USERNAME
-  artifactory_password=$NEW_ARTIFACTORY_WRITE_PASSWORD
-
-  oneapp_maven_username=$ONEAPP_MAVEN_USERNAME
-  oneapp_maven_username=$ONEAPP_MAVEN_PASSWORD
-}
-
 function copyJunitReports() {
   dest=$(cd ${project_dir}; pwd)/build/junit-reports
   rm -rf "$dest" 2>/dev/null || true
@@ -99,24 +73,16 @@ fi
 
 cd $project_dir
 
-exportGradleProperties
 
 if isSkyBranch || isSnapshotCommit; then
   echo "Yes"
   echo ">>>> DEPLOYING SNAPSHOT <<<<"
   $script_dir/build_ffmpeg.sh
 
-  ./gradlew validateVariables
   ./gradlew clean lintRelease testRelease assembleRelease
   # no-configure-on-demand flag is required due to an issue with jfrog artifactory plugin
   # but it's not a long term solution, as per https://github.com/gradle/gradle/issues/4783#issuecomment-393184042
-  ./gradlew -Partifactory_url=$artifactory_url \
-            -Partifactory_path=$artifactory_path \
-            -Partifactory_username=$artifactory_username \
-            -Partifactory_password=$artifactory_password \
-            -Poneapp_maven_username=$oneapp_maven_username \
-            -Poneapp_maven_password=$oneapp_maven_password \
-            -Dorg.gradle.parallel=false --no-configure-on-demand \
+  ./gradlew -Dorg.gradle.parallel=false --no-configure-on-demand \
             sourcesJar \
             javadocJar \
             generatePomFileForAarReleasePublication \
@@ -124,6 +90,5 @@ if isSkyBranch || isSnapshotCommit; then
             publishReleasePublicationToOneAppMavenRepository
 else
   echo "No"
-  ./gradlew validateVariables
   ./gradlew clean lintRelease testRelease
 fi
