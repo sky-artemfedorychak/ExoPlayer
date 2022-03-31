@@ -27,6 +27,7 @@ import android.content.Context;
 import android.graphics.Point;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo.CodecCapabilities;
+import android.media.MediaCodecInfo.CodecProfileLevel;
 import android.media.MediaCrypto;
 import android.media.MediaFormat;
 import android.os.Bundle;
