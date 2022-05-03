@@ -53,6 +53,7 @@ import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil.DecoderQueryException;
 import com.google.android.exoplayer2.mediacodec.MediaFormatUtil;
 import com.google.android.exoplayer2.util.Assertions;
+import com.google.android.exoplayer2.util.Log;
 import com.google.android.exoplayer2.util.MediaClock;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.Util;
@@ -602,8 +603,15 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
       // TODO: Remove this hack once we have a proper fix for [Internal: b/71876314].
       // Allow the position to jump if the first presentable input buffer has a timestamp that
       // differs significantly from what was expected.
-      if (Math.abs(buffer.timeUs - currentPositionUs) > 500000) {
-        currentPositionUs = buffer.timeUs;
+      long prevPositionUs = currentPositionUs;
+      long bufferPosDelta = buffer.timeUs - currentPositionUs;
+      if (Math.abs(bufferPosDelta) > 500000) {
+            currentPositionUs = Math.max(buffer.timeUs, 0);
+      }
+      if (bufferPosDelta != 0) {
+        Log.i(TAG, "Found discontinuity of " + bufferPosDelta + " on first queued input buffer " +
+                "after position reset: buffer.timeUs=" + buffer.timeUs + ", currentPositionUs=" +
+                currentPositionUs + " (was " + prevPositionUs + ")");
       }
       allowFirstBufferPositionDiscontinuity = false;
     }
@@ -638,7 +646,9 @@ public class MediaCodecAudioRenderer extends MediaCodecRenderer implements Media
       return true;
     }
 
-    if (isDecodeOnlyBuffer) {
+    // as we don't allow playback position to become negative we can skip the buffers with negative
+    // presentation time (if we let them play, audio/video will get out of sync until the next seek)
+    if (isDecodeOnlyBuffer || bufferPresentationTimeUs < 0) {
       if (codec != null) {
         codec.releaseOutputBuffer(bufferIndex, false);
       }
